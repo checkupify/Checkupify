@@ -1,0 +1,8 @@
+{
+  "name": "checkupify-hr",
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "regions": ["sin1"]
+}
