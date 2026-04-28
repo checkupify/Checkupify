@@ -1,8 +1,0 @@
-{
-  "name": "checkupify-kb",
-  "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "installCommand": "npm install",
-  "regions": ["sin1"]
-}
