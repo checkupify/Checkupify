@@ -2,9 +2,9 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
-const SB = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const SB = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://lguoussmsusadvmexjkb.supabase.co', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxndW91c3Ntc3VzYWR2bWV4amtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3Njc1OTcsImV4cCI6MjA5MDM0MzU5N30.Mq6nW2ItZqywuIbVeOUR9HQOglZOL5Wm0uSFwT6hfjw');
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://lguoussmsusadvmexjkb.supabase.co';
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxndW91c3Ntc3VzYWR2bWV4amtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3Njc1OTcsImV4cCI6MjA5MDM0MzU5N30.Mq6nW2ItZqywuIbVeOUR9HQOglZOL5Wm0uSFwT6hfjw';
 const RZP_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? 'rzp_test_placeholder';
 
 type Screen = 'splash'|'otp-phone'|'otp-verify'|'home'|'packages'|'book-pkg'|'book-lab'|'book-slot'|'book-confirm'|'pay'|'booking-done'|'my-bookings'|'booking-detail'|'reports'|'profile';
