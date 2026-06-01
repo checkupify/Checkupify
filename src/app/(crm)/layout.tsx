@@ -10,6 +10,7 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
   const [newBookings, setNewBookings] = useState(0);
   const [newLeads, setNewLeads] = useState(0);
   const [checking, setChecking] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const fetchCounts = useCallback(async () => {
     const [bRes, lRes] = await Promise.allSettled([
@@ -27,29 +28,36 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
       setChecking(false);
       fetchCounts();
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_OUT" || !session) router.replace("/login");
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((e, s) => {
+      if (e === "SIGNED_OUT" || !s) router.replace("/login");
     });
     return () => subscription.unsubscribe();
   }, [router, fetchCounts]);
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "#22C55E", boxShadow: "0 0 20px rgba(34,197,94,0.3)" }}>
-            <span className="text-white font-black">C</span>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "linear-gradient(135deg, #0B2545 0%, #1B4B8A 100%)" }}>
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: "#22C55E", boxShadow: "0 0 20px rgba(34,197,94,0.4)" }}>
+            <span className="text-white font-black text-xl">C</span>
           </div>
-          <div className="w-6 h-6 border-2 border-[#E8ECF2] border-t-[#22C55E] rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-white/20 border-t-[#22C55E] rounded-full animate-spin mx-auto" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-[#F5F7FA] overflow-hidden">
-      <Sidebar userEmail={email} newBookings={newBookings} newLeads={newLeads} />
+    <div className="flex h-screen bg-[#F0F4F8] overflow-hidden">
+      <Sidebar
+        userEmail={email}
+        newBookings={newBookings}
+        newLeads={newLeads}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {/* Pass menu trigger to children via context workaround — children get onMenuClick via TopBar */}
         {children}
       </div>
     </div>
