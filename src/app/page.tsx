@@ -1,59 +1,61 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { fmt, fmtDate, cn } from "@/lib/utils";
-import type { Package, Lab, Booking, UserData } from "@/types";
+import { fmt, fmtDate, fmtTime } from "@/lib/utils";
+import type { Pkg, Lab, Booking, User } from "@/types";
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
-const C = {
-  navy: "#0B2545", navyDeep: "#061529", navyMid: "#1B4B8A",
-  green: "#22C55E", greenDark: "#16A34A", greenLight: "#DCFCE7",
-  white: "#FFFFFF", bg: "#F9FAFB", card: "#FFFFFF",
-  text: "#111827", textMid: "#4B5563", textLight: "#9CA3AF",
-  border: "#E5E7EB", amber: "#F59E0B", red: "#EF4444",
+// ─── Constants ────────────────────────────────────────────────────────────────
+const N = "#0B2545";     // navy
+const N2 = "#1B4B8A";   // navy mid
+const G = "#22C55E";    // green
+const GD = "#16A34A";   // green dark
+const DEMO: User = { id:"demo", phone:"+91-0000000000", name:"Demo User", email:"demo@checkupify.com", gender:"Male", city:"Hyderabad" };
+
+const STAGES: Record<string, { bg: string; fg: string; label: string }> = {
+  "New":               { bg:"#EFF6FF", fg:"#1D4ED8", label:"Booked" },
+  "Confirmed":         { bg:"#F0FDF4", fg:"#15803D", label:"Confirmed ✓" },
+  "Completed":         { bg:"#F0FDFA", fg:"#0D9488", label:"Completed" },
+  "Pending Reports":   { bg:"#FFFBEB", fg:"#B45309", label:"Reports Pending" },
+  "Partially Received":{ bg:"#FAF5FF", fg:"#7E22CE", label:"Partial Report" },
+  "Received":          { bg:"#F0FDF4", fg:"#15803D", label:"Report Ready ✓" },
+  "Rejected":          { bg:"#FEF2F2", fg:"#DC2626", label:"Cancelled" },
+  "No Show":           { bg:"#F9FAFB", fg:"#6B7280", label:"No Show" },
 };
 
-type Screen = "splash"|"otp"|"verify"|"home"|"packages"|"select-lab"|"select-slot"|"confirm"|"success"|"bookings"|"booking-detail"|"reports"|"profile";
+type Screen = "splash"|"otp"|"verify"|"home"|"packages"|"lab"|"slot"|"confirm"|"success"|"bookings"|"detail"|"reports"|"profile";
 
-const STAGES: Record<string,{bg:string;text:string}> = {
-  "New":{bg:"#EFF6FF",text:"#2563EB"},
-  "Confirmed":{bg:"#F0FDF4",text:"#16A34A"},
-  "Completed":{bg:"#F0FDFA",text:"#0D9488"},
-  "Pending Reports":{bg:"#FFFBEB",text:"#D97706"},
-  "Received":{bg:"#F0FDF4",text:"#16A34A"},
-  "Rejected":{bg:"#FEF2F2",text:"#DC2626"},
-};
-
-const DEMO_USER: UserData = { id:"demo", phone:"+91-9999999999", name:"Demo User", email:"demo@checkupify.com", gender:"Male", city:"Hyderabad", dob:"1990-01-01" };
-
-export default function PatientApp() {
+// ─── Main App ─────────────────────────────────────────────────────────────────
+export default function App() {
   const [screen, setScreen] = useState<Screen>("splash");
   const [phone, setPhone] = useState("");
-  const [user, setUser] = useState<UserData|null>(null);
-  const [packages, setPackages] = useState<Package[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [pkgs, setPkgs] = useState<Pkg[]>([]);
   const [labs, setLabs] = useState<Lab[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selPkg, setSelPkg] = useState<Package|null>(null);
-  const [selLab, setSelLab] = useState<Lab|null>(null);
+  const [selPkg, setSelPkg] = useState<Pkg | null>(null);
+  const [selLab, setSelLab] = useState<Lab | null>(null);
   const [selDate, setSelDate] = useState("");
   const [selSlot, setSelSlot] = useState("");
   const [selType, setSelType] = useState("walkin");
   const [doneId, setDoneId] = useState("");
-  const [detailB, setDetailB] = useState<Booking|null>(null);
+  const [detailB, setDetailB] = useState<Booking | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const fetchData = useCallback(async (u?: UserData) => {
+  const loadData = useCallback(async (u?: User) => {
     const usr = u ?? user;
     setLoading(true);
     const [pRes, lRes] = await Promise.allSettled([
-      supabase.from("packages").select("*").eq("active",true).order("sort_order"),
-      supabase.from("labs").select("*").eq("active",true),
+      supabase.from("packages").select("*").eq("active", true).order("sort_order"),
+      supabase.from("labs").select("*").eq("active", true),
     ]);
-    if (pRes.status==="fulfilled"&&pRes.value.data) setPackages(pRes.value.data as Package[]);
-    if (lRes.status==="fulfilled"&&lRes.value.data) setLabs(lRes.value.data as Lab[]);
+    if (pRes.status === "fulfilled" && pRes.value.data) setPkgs(pRes.value.data as Pkg[]);
+    if (lRes.status === "fulfilled" && lRes.value.data) setLabs(lRes.value.data as Lab[]);
     if (usr?.phone) {
-      const{data}=await supabase.from("bookings").select("*,lab:labs(name,city),package:packages(name)").eq("patient_phone",usr.phone).order("created_at",{ascending:false});
-      if(data) setBookings(data as Booking[]);
+      const { data } = await supabase.from("bookings")
+        .select("*,lab:labs(name,city),package:packages(name)")
+        .eq("patient_phone", usr.phone)
+        .order("created_at", { ascending: false });
+      if (data) setBookings(data as Booking[]);
     }
     setLoading(false);
   }, [user]);
@@ -62,215 +64,317 @@ export default function PatientApp() {
 
   const go = (s: Screen) => setScreen(s);
 
-  if (screen === "splash") return <Splash />;
-  if (screen === "otp") return <OTPScreen onSend={p=>{setPhone(p);go("verify");}} onGuest={()=>{setUser(DEMO_USER);fetchData(DEMO_USER);go("home");}} />;
-  if (screen === "verify") return <OTPVerify phone={phone} onVerified={u=>{setUser(u);fetchData(u);go("home");}} onBack={()=>go("otp")} />;
+  const S = {
+    splash: <Splash />,
+    otp: <OTPScreen onSend={p => { setPhone(p); go("verify"); }} onGuest={() => { setUser(DEMO); loadData(DEMO); go("home"); }} />,
+    verify: <OTPVerify phone={phone} onDone={u => { setUser(u); loadData(u); go("home"); }} onBack={() => go("otp")} />,
+  };
+  if (screen in S) return (S as any)[screen];
+  if (!user) return (S as any).otp;
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB]">
-      {user && (
-        <>
-          {screen==="home"    && <HomePage user={user} bookings={bookings} packages={packages} loading={loading} onNav={go} onRefresh={()=>fetchData()} />}
-          {screen==="packages"&& <PackagesPage packages={packages} onSelect={p=>{setSelPkg(p);go("select-lab");}} onBack={()=>go("home")} />}
-          {screen==="select-lab"&&selPkg && <SelectLabPage pkg={selPkg} labs={labs} onSelect={l=>{setSelLab(l);go("select-slot");}} onBack={()=>go("packages")} />}
-          {screen==="select-slot"&&selPkg&&selLab && <SelectSlotPage pkg={selPkg} lab={selLab} onSelect={(d,s,t)=>{setSelDate(d);setSelSlot(s);setSelType(t);go("confirm");}} onBack={()=>go("select-lab")} />}
-          {screen==="confirm"&&selPkg&&selLab && <ConfirmPage pkg={selPkg} lab={selLab} date={selDate} slot={selSlot} type={selType} user={user} onSuccess={id=>{setDoneId(id);fetchData();go("success");}} onBack={()=>go("select-slot")} />}
-          {screen==="success" && <SuccessPage bookingId={doneId} onHome={()=>{fetchData();go("home");}} />}
-          {screen==="bookings"&& <BookingsPage bookings={bookings} loading={loading} onRefresh={()=>fetchData()} onDetail={b=>{setDetailB(b);go("booking-detail");}} onBack={()=>go("home")} />}
-          {screen==="booking-detail"&&detailB && <BookingDetailPage booking={detailB} onBack={()=>go("bookings")} />}
-          {screen==="reports" && <ReportsPage bookings={bookings.filter(b=>b.report_url||b.stage==="Received")} onBack={()=>go("home")} />}
-          {screen==="profile" && <ProfilePage user={user} bookings={bookings} onSave={u=>setUser(u)} onLogout={()=>{setUser(null);go("otp");}} onBack={()=>go("home")} />}
-        </>
-      )}
+    <div style={{ minHeight: "100svh", maxWidth: "480px", margin: "0 auto", background: "white", position: "relative" }}>
+      {screen === "home" && <Home user={user} pkgs={pkgs} bookings={bookings} loading={loading} onNav={go} onRefresh={() => loadData()} />}
+      {screen === "packages" && <Packages pkgs={pkgs} onSelect={p => { setSelPkg(p); go("lab"); }} onBack={() => go("home")} />}
+      {screen === "lab" && selPkg && <SelectLab pkg={selPkg} labs={labs} onSelect={l => { setSelLab(l); go("slot"); }} onBack={() => go("packages")} />}
+      {screen === "slot" && selPkg && selLab && <SelectSlot pkg={selPkg} lab={selLab} onSelect={(d, s, t) => { setSelDate(d); setSelSlot(s); setSelType(t); go("confirm"); }} onBack={() => go("lab")} />}
+      {screen === "confirm" && selPkg && selLab && <Confirm pkg={selPkg} lab={selLab} date={selDate} slot={selSlot} type={selType} user={user} onSuccess={id => { setDoneId(id); loadData(); go("success"); }} onBack={() => go("slot")} />}
+      {screen === "success" && <Success id={doneId} onHome={() => { loadData(); go("home"); }} />}
+      {screen === "bookings" && <Bookings bookings={bookings} loading={loading} onDetail={b => { setDetailB(b); go("detail"); }} onRefresh={() => loadData()} onNav={go} />}
+      {screen === "detail" && detailB && <Detail booking={detailB} onBack={() => go("bookings")} />}
+      {screen === "reports" && <Reports bookings={bookings.filter(b => b.report_url || b.stage === "Received")} onNav={go} />}
+      {screen === "profile" && <Profile user={user} bookings={bookings} onSave={u => setUser(u)} onLogout={() => { setUser(null); go("otp"); }} onNav={go} />}
     </div>
   );
 }
 
-// ─── SPLASH ───────────────────────────────────────────────────────────────────
+// ─── Shared UI primitives ─────────────────────────────────────────────────────
+const navyGrad = `linear-gradient(160deg, ${N} 0%, ${N2} 100%)`;
+const greenGrad = `linear-gradient(135deg, ${G}, ${GD})`;
+
+function Btn({ children, onClick, disabled, loading: l, ghost, outline, small }: {
+  children: React.ReactNode; onClick?: () => void; disabled?: boolean;
+  loading?: boolean; ghost?: boolean; outline?: boolean; small?: boolean;
+}) {
+  const base: React.CSSProperties = {
+    width: small ? undefined : "100%", display: "flex", alignItems: "center",
+    justifyContent: "center", gap: "8px", cursor: "pointer", border: "none",
+    fontFamily: "inherit", fontWeight: 700, transition: "all .15s",
+    fontSize: small ? "13px" : "15px", padding: small ? "8px 18px" : "15px 20px",
+    borderRadius: small ? "10px" : "14px", opacity: disabled || l ? .55 : 1,
+  };
+  if (ghost) return (
+    <button onClick={onClick} disabled={disabled || l} style={{ ...base, background: "rgba(255,255,255,.12)", color: "white", border: "1px solid rgba(255,255,255,.25)" }}>
+      {l ? <Spinner white /> : children}
+    </button>
+  );
+  if (outline) return (
+    <button onClick={onClick} disabled={disabled || l} style={{ ...base, background: "white", color: N, border: `1.5px solid #E2E8F0`, boxShadow: "0 1px 3px rgba(11,37,69,.07)" }}>
+      {l ? <Spinner /> : children}
+    </button>
+  );
+  return (
+    <button onClick={onClick} disabled={disabled || l} style={{ ...base, background: greenGrad, color: "white", boxShadow: "0 4px 16px rgba(34,197,94,.28)" }}>
+      {l ? <Spinner white /> : children}
+    </button>
+  );
+}
+
+function Spinner({ white }: { white?: boolean }) {
+  return <span className="spin" style={{ width: 18, height: 18, borderRadius: "50%", border: `2.5px solid ${white ? "rgba(255,255,255,.3)" : "rgba(34,197,94,.3)"}`, borderTopColor: white ? "white" : G, display: "inline-block", flexShrink: 0 }} />;
+}
+
+function NavBar({ active, onNav }: { active: Screen; onNav: (s: Screen) => void }) {
+  const items = [
+    { s: "home" as Screen, emoji: "🏠", label: "Home" },
+    { s: "packages" as Screen, emoji: "🧪", label: "Book" },
+    { s: "bookings" as Screen, emoji: "📅", label: "Bookings" },
+    { s: "reports" as Screen, emoji: "📄", label: "Reports" },
+    { s: "profile" as Screen, emoji: "👤", label: "Profile" },
+  ];
+  return (
+    <div className="tab-bar" style={{ position: "fixed", bottom: 0, left: 0, right: 0, maxWidth: 480, margin: "0 auto", display: "flex", zIndex: 50, paddingBottom: "max(env(safe-area-inset-bottom,0px),8px)" }}>
+      {items.map(n => {
+        const isActive = active === n.s;
+        return (
+          <button key={n.s} onClick={() => onNav(n.s)} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "8px 0", cursor: "pointer", background: "none", border: "none", fontFamily: "inherit" }}>
+            <span style={{ fontSize: 20, lineHeight: 1 }}>{n.emoji}</span>
+            <span style={{ fontSize: 10, fontWeight: isActive ? 700 : 500, color: isActive ? G : "#94A3B8" }}>{n.label}</span>
+            {isActive && <span style={{ width: 16, height: 2.5, borderRadius: 99, background: G, marginTop: 1 }} />}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function BackHeader({ title, subtitle, onBack, white }: { title: string; subtitle?: string; onBack: () => void; white?: boolean }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+      <button onClick={onBack} style={{ width: 36, height: 36, borderRadius: 12, background: white ? "rgba(255,255,255,.15)" : "#F0F4F8", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: white ? "white" : N, fontSize: 18, fontFamily: "inherit" }}>
+        ←
+      </button>
+      <div>
+        <h1 style={{ fontSize: 20, fontWeight: 900, color: white ? "white" : N, letterSpacing: "-.3px", lineHeight: 1.2 }}>{title}</h1>
+        {subtitle && <p style={{ fontSize: 13, color: white ? "rgba(255,255,255,.55)" : "#7A90B3", marginTop: 2 }}>{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
+function StagePill({ stage }: { stage: string }) {
+  const s = STAGES[stage] ?? { bg: "#F3F4F6", fg: "#6B7280", label: stage };
+  return <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 99, background: s.bg, color: s.fg }}>{s.label}</span>;
+}
+
+// ─── Splash ───────────────────────────────────────────────────────────────────
 function Splash() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center" style={{background:"linear-gradient(135deg, #0B2545 0%, #1B4B8A 100%)"}}>
-      <div className="fade-up text-center">
-        <div className="w-20 h-20 rounded-3xl mx-auto mb-6 flex items-center justify-center" style={{background:"#22C55E",boxShadow:"0 20px 40px rgba(34,197,94,0.4)"}}>
-          <span className="text-white text-4xl font-black">✓</span>
+    <div style={{ minHeight: "100svh", background: navyGrad, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div className="scale-in" style={{ textAlign: "center" }}>
+        <div style={{ width: 88, height: 88, borderRadius: 28, background: G, boxShadow: "0 20px 50px rgba(34,197,94,.45)", margin: "0 auto 28px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
+            <path d="M20 6L9 17L4 12" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </div>
-        <h1 className="text-4xl font-black text-white mb-2" style={{letterSpacing:"-1px"}}>Checkupify</h1>
-        <p className="text-lg font-medium" style={{color:"rgba(255,255,255,0.6)"}}>Your Health. Simplified.</p>
+        <h1 style={{ fontSize: 42, fontWeight: 900, color: "white", letterSpacing: "-1.5px", lineHeight: 1, marginBottom: 10 }}>Checkupify</h1>
+        <p style={{ fontSize: 17, color: "rgba(255,255,255,.55)", fontWeight: 400 }}>Your Health. Simplified.</p>
       </div>
-      <div className="absolute bottom-12 flex items-center gap-2">
-        <div className="w-2 h-2 rounded-full bg-white opacity-40 animate-spin" style={{animationDuration:"1s"}} />
+      <div style={{ position: "absolute", bottom: 52, display: "flex", alignItems: "center", gap: 8 }}>
+        <span className="spin" style={{ width: 22, height: 22, borderRadius: "50%", border: "2.5px solid rgba(255,255,255,.15)", borderTopColor: G, display: "inline-block" }} />
+        <span style={{ fontSize: 13, color: "rgba(255,255,255,.4)" }}>Loading…</span>
       </div>
     </div>
   );
 }
 
-// ─── OTP SCREEN ────────────────────────────────────────────────────────────────
-function OTPScreen({ onSend, onGuest }: { onSend:(p:string)=>void; onGuest:()=>void }) {
+// ─── OTP Screen ───────────────────────────────────────────────────────────────
+function OTPScreen({ onSend, onGuest }: { onSend: (p: string) => void; onGuest: () => void }) {
   const [ph, setPh] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
   async function send() {
-    const c = ph.replace(/\D/g,"");
-    if (c.length !== 10) { setErr("Enter 10-digit mobile number"); return; }
+    const c = ph.replace(/\D/g, "");
+    if (c.length !== 10) { setErr("Enter valid 10-digit number"); return; }
     setLoading(true); setErr("");
-    const otp = String(Math.floor(100000+Math.random()*900000));
-    await supabase.from("otp_sessions").upsert({phone:`+91${c}`,otp,expires_at:new Date(Date.now()+600000).toISOString(),used:false});
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    await supabase.from("otp_sessions").upsert({ phone: `+91${c}`, otp, expires_at: new Date(Date.now() + 600000).toISOString(), used: false });
     setLoading(false);
     onSend(`+91${c}`);
   }
 
   return (
-    <div className="min-h-screen" style={{background:"linear-gradient(160deg, #0B2545 0%, #1B4B8A 60%, #0B2545 100%)"}}>
-      <div className="max-w-md mx-auto px-6 pt-20 pb-10">
-        <div className="w-12 h-12 rounded-2xl mb-8 flex items-center justify-center" style={{background:"#22C55E"}}>
-          <span className="text-white text-2xl font-black">C</span>
-        </div>
-        <h1 className="text-3xl font-black text-white mb-2" style={{letterSpacing:"-0.5px"}}>Welcome to<br/>Checkupify</h1>
-        <p className="text-base mb-10" style={{color:"rgba(255,255,255,0.55)"}}>Book health checkups in minutes</p>
-
-        <div className="rounded-2xl overflow-hidden mb-4 flex" style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)"}}>
-          <div className="px-5 py-4 border-r flex items-center" style={{borderColor:"rgba(255,255,255,0.12)"}}>
-            <span className="text-white font-bold text-base">🇮🇳 +91</span>
+    <div style={{ minHeight: "100svh", background: navyGrad, display: "flex", flexDirection: "column" }}>
+      {/* Hero */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "60px 28px 32px" }}>
+        <div className="fade-up">
+          <div style={{ width: 52, height: 52, borderRadius: 18, background: G, marginBottom: 28, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(34,197,94,.35)" }}>
+            <span style={{ fontSize: 26, fontWeight: 900, color: "white", fontFamily: "inherit" }}>C</span>
           </div>
-          <input className="flex-1 bg-transparent px-4 text-2xl font-bold text-white placeholder-white/30 outline-none tracking-widest"
-            placeholder="9876543210" maxLength={10} value={ph} onChange={e=>setPh(e.target.value.replace(/\D/g,""))}
-            inputMode="numeric" />
+          <h1 style={{ fontSize: 36, fontWeight: 900, color: "white", letterSpacing: "-1px", lineHeight: 1.1, marginBottom: 10 }}>Welcome to<br />Checkupify</h1>
+          <p style={{ fontSize: 16, color: "rgba(255,255,255,.5)", marginBottom: 36, fontWeight: 400 }}>Book health checkups in minutes</p>
         </div>
-        {err && <p className="text-red-300 text-sm mb-3">{err}</p>}
-        <button onClick={send} disabled={loading}
-          className="w-full py-4 rounded-2xl font-bold text-base text-white disabled:opacity-50 cursor-pointer transition-all hover:opacity-90 mb-4"
-          style={{background:"#22C55E",boxShadow:"0 8px 20px rgba(34,197,94,0.35)"}}>
-          {loading ? "Sending OTP…" : "Get OTP →"}
-        </button>
-        <button onClick={onGuest} className="w-full py-3 text-sm text-center cursor-pointer transition-opacity hover:opacity-70" style={{color:"rgba(255,255,255,0.4)"}}>
+
+        {/* Phone input */}
+        <div className="fade-up delay-1" style={{ background: "rgba(255,255,255,.08)", border: "1.5px solid rgba(255,255,255,.12)", borderRadius: 16, display: "flex", overflow: "hidden", marginBottom: 12 }}>
+          <div style={{ padding: "0 18px", display: "flex", alignItems: "center", borderRight: "1px solid rgba(255,255,255,.12)" }}>
+            <span style={{ fontSize: 16, fontWeight: 700, color: "white", whiteSpace: "nowrap" }}>🇮🇳 +91</span>
+          </div>
+          <input
+            type="tel" inputMode="numeric" maxLength={10} value={ph}
+            onChange={e => { setPh(e.target.value.replace(/\D/g, "")); setErr(""); }}
+            placeholder="98765 43210"
+            onKeyDown={e => e.key === "Enter" && send()}
+            style={{ flex: 1, background: "transparent", border: "none", padding: "16px 18px", fontSize: 20, fontWeight: 700, color: "white", outline: "none", letterSpacing: 2, fontFamily: "inherit" }}
+          />
+        </div>
+        {err && <p style={{ fontSize: 13, color: "#FCA5A5", marginBottom: 12, paddingLeft: 4 }}>{err}</p>}
+
+        <div className="fade-up delay-2">
+          <Btn onClick={send} loading={loading}>Get OTP →</Btn>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{ padding: "0 28px 48px", textAlign: "center" }} className="fade-up delay-3">
+        <button onClick={onGuest} style={{ background: "none", border: "1px solid rgba(255,255,255,.15)", borderRadius: 12, padding: "10px 24px", color: "rgba(255,255,255,.4)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
           Continue as guest (demo mode)
         </button>
+        <p style={{ marginTop: 16, fontSize: 12, color: "rgba(255,255,255,.25)" }}>By continuing, you agree to our Terms & Privacy Policy</p>
       </div>
     </div>
   );
 }
 
-// ─── OTP VERIFY ───────────────────────────────────────────────────────────────
-function OTPVerify({ phone, onVerified, onBack }: { phone:string; onVerified:(u:UserData)=>void; onBack:()=>void }) {
+// ─── OTP Verify ───────────────────────────────────────────────────────────────
+function OTPVerify({ phone, onDone, onBack }: { phone: string; onDone: (u: User) => void; onBack: () => void }) {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
   async function verify() {
-    if (otp.length!==6) { setErr("Enter 6-digit OTP"); return; }
+    if (otp.length !== 6) { setErr("Enter 6-digit OTP"); return; }
     setLoading(true); setErr("");
-    const{data}=await supabase.from("otp_sessions").select("*").eq("phone",phone).eq("used",false).single();
-    if (!data||(otp!==data.otp&&otp!=="123456")) { setErr("Wrong OTP. Use 123456 for demo."); setLoading(false); return; }
-    await supabase.from("otp_sessions").update({used:true}).eq("phone",phone);
-    let{data:user}=await supabase.from("users").select("*").eq("phone",phone).single();
-    if (!user) { const{data:nu}=await supabase.from("users").insert({phone,name:"",email:"",gender:"",city:""}).select().single(); user=nu; }
+    const { data } = await supabase.from("otp_sessions").select("*").eq("phone", phone).eq("used", false).single();
+    if (!data || (otp !== data.otp && otp !== "123456")) {
+      setErr("Wrong OTP. Use 123456 for demo."); setLoading(false); return;
+    }
+    await supabase.from("otp_sessions").update({ used: true }).eq("phone", phone);
+    let { data: u } = await supabase.from("users").select("*").eq("phone", phone).single();
+    if (!u) {
+      const { data: nu } = await supabase.from("users").insert({ phone, name: "", email: "", gender: "Male", city: "" }).select().single();
+      u = nu;
+    }
     setLoading(false);
-    if (user) onVerified(user as UserData);
+    if (u) onDone(u as User);
   }
 
   return (
-    <div className="min-h-screen" style={{background:"linear-gradient(160deg, #0B2545 0%, #1B4B8A 60%, #0B2545 100%)"}}>
-      <div className="max-w-md mx-auto px-6 pt-16 pb-10">
-        <button onClick={onBack} className="text-white/60 text-sm mb-10 flex items-center gap-2 cursor-pointer hover:text-white/80">← Back</button>
-        <h1 className="text-3xl font-black text-white mb-2">Verify OTP</h1>
-        <p className="text-base mb-10" style={{color:"rgba(255,255,255,0.55)"}}>Sent to {phone}</p>
-
-        <input className="w-full rounded-2xl px-6 py-5 text-center text-4xl font-black text-white outline-none tracking-[0.3em] mb-3"
-          style={{background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.15)"}}
-          placeholder="——————" maxLength={6} value={otp} onChange={e=>setOtp(e.target.value.replace(/\D/g,""))} inputMode="numeric" />
-
-        <div className="rounded-xl px-4 py-3 mb-6 text-sm text-center font-medium" style={{background:"rgba(99,102,241,0.15)",color:"#818CF8"}}>
-          Demo: use OTP 123456
+    <div style={{ minHeight: "100svh", background: navyGrad, display: "flex", flexDirection: "column", padding: "60px 28px 48px" }}>
+      <BackHeader title="Verify OTP" subtitle={`Sent to ${phone}`} onBack={onBack} white />
+      <div className="fade-up" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <input
+          type="tel" inputMode="numeric" maxLength={6} value={otp}
+          onChange={e => { setOtp(e.target.value.replace(/\D/g, "")); setErr(""); }}
+          style={{ width: "100%", background: "rgba(255,255,255,.1)", border: "1.5px solid rgba(255,255,255,.15)", borderRadius: 16, padding: 20, fontSize: 40, fontWeight: 900, color: "white", letterSpacing: 16, textAlign: "center", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+        />
+        <div style={{ background: "rgba(99,102,241,.15)", border: "1px solid rgba(99,102,241,.25)", borderRadius: 12, padding: "10px 16px", margin: "14px 0 20px", textAlign: "center" }}>
+          <span style={{ fontSize: 13, color: "#A5B4FC", fontWeight: 600 }}>Demo: use OTP <strong style={{ color: "#818CF8" }}>123456</strong></span>
         </div>
-        {err && <p className="text-red-300 text-sm mb-3">{err}</p>}
-        <button onClick={verify} disabled={loading}
-          className="w-full py-4 rounded-2xl font-bold text-base text-white disabled:opacity-50 cursor-pointer hover:opacity-90"
-          style={{background:"#22C55E",boxShadow:"0 8px 20px rgba(34,197,94,0.35)"}}>
-          {loading ? "Verifying…" : "Verify & Continue →"}
+        {err && <p style={{ fontSize: 13, color: "#FCA5A5", textAlign: "center", marginBottom: 16 }}>{err}</p>}
+        <Btn onClick={verify} loading={loading} disabled={otp.length < 6}>Verify & Continue →</Btn>
+        <button onClick={() => {}} style={{ marginTop: 16, color: "rgba(255,255,255,.35)", fontSize: 13, background: "none", border: "none", cursor: "pointer", textAlign: "center", fontFamily: "inherit", width: "100%" }}>
+          Resend OTP in 30s
         </button>
       </div>
     </div>
   );
 }
 
-// ─── HOME PAGE ─────────────────────────────────────────────────────────────────
-function HomePage({ user, bookings, packages, loading, onNav, onRefresh }: { user:UserData; bookings:Booking[]; packages:Package[]; loading:boolean; onNav:(s:Screen)=>void; onRefresh:()=>void }) {
-  const upcoming = bookings.filter(b=>!["Received","Rejected"].includes(b.stage)).slice(0,2);
-  const received = bookings.filter(b=>b.stage==="Received");
-  const score = received.length>0 ? Math.min(100,50+received.length*12) : 0;
+// ─── Home ─────────────────────────────────────────────────────────────────────
+function Home({ user, pkgs, bookings, loading, onNav, onRefresh }: { user: User; pkgs: Pkg[]; bookings: Booking[]; loading: boolean; onNav: (s: Screen) => void; onRefresh: () => void }) {
+  const upcoming = bookings.filter(b => !["Received", "Rejected"].includes(b.stage)).slice(0, 2);
+  const completed = bookings.filter(b => b.stage === "Received").length;
+  const score = completed > 0 ? Math.min(100, 45 + completed * 11) : 0;
+  const todayStr = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
 
   return (
-    <div className="min-h-screen" style={{background:"#F9FAFB"}}>
-      {/* Hero header */}
-      <div className="px-5 pt-14 pb-10" style={{background:"linear-gradient(160deg, #0B2545 0%, #1B4B8A 100%)"}}>
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <p className="text-sm font-semibold mb-1" style={{color:"#22C55E"}}>{new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long"})}</p>
-            <h1 className="text-2xl font-black text-white">Hi, {user.name?.split(" ")[0]||"there"} 👋</h1>
+    <div style={{ minHeight: "100svh", background: "#F0F4F8", paddingBottom: 80 }}>
+      {/* Hero Header */}
+      <div style={{ background: navyGrad, padding: "52px 20px 90px", position: "relative", overflow: "hidden" }}>
+        {/* Decorative */}
+        <div style={{ position: "absolute", right: -40, top: -40, width: 200, height: 200, borderRadius: "50%", background: "rgba(34,197,94,.08)" }} />
+        <div style={{ position: "absolute", right: 40, bottom: -60, width: 130, height: 130, borderRadius: "50%", background: "rgba(255,255,255,.04)" }} />
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative" }}>
+          <div className="fade-up">
+            <p style={{ fontSize: 12, fontWeight: 700, color: G, marginBottom: 6, letterSpacing: ".05em" }}>{todayStr}</p>
+            <h1 style={{ fontSize: 26, fontWeight: 900, color: "white", letterSpacing: "-.5px" }}>
+              Hi {user.name?.split(" ")[0] || "there"} 👋
+            </h1>
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,.5)", marginTop: 4 }}>What would you like to check today?</p>
           </div>
-          <button onClick={()=>onNav("profile")}
-            className="w-11 h-11 rounded-full flex items-center justify-center font-black text-white cursor-pointer"
-            style={{background:"#22C55E",boxShadow:"0 4px 12px rgba(34,197,94,0.4)"}}>
-            {(user.name?.[0]||"U").toUpperCase()}
+          <button onClick={() => onNav("profile")}
+            style={{ width: 46, height: 46, borderRadius: "50%", background: G, border: "2.5px solid rgba(255,255,255,.2)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: "white", fontFamily: "inherit", boxShadow: "0 4px 14px rgba(34,197,94,.35)", flexShrink: 0 }}>
+            {(user.name?.[0] || "U").toUpperCase()}
           </button>
         </div>
 
-        {/* Health score card */}
-        <div className="rounded-2xl p-5 mb-2" style={{background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)"}}>
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0" style={{border:`3px solid ${score>0?"#22C55E":"rgba(255,255,255,0.2)"}`,background:score>0?"rgba(34,197,94,0.15)":"rgba(255,255,255,0.05)"}}>
-              <span className="text-xl font-black text-white">{score>0?score:"—"}</span>
-            </div>
-            <div className="flex-1">
-              <p className="font-bold text-white mb-1">Health Score</p>
-              <p className="text-sm" style={{color:"rgba(255,255,255,0.6)"}}>
-                {score>0 ? (score>=80?"🟢 Excellent health!":"🟡 Book a checkup soon") : "Book your first checkup to see your score"}
-              </p>
-              {score===0 && (
-                <button onClick={()=>onNav("packages")} className="text-sm font-bold mt-2 cursor-pointer" style={{color:"#22C55E"}}>Book now →</button>
-              )}
-            </div>
+        {/* Health score */}
+        <div className="fade-up delay-1" style={{ marginTop: 24, background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 20, padding: 18, display: "flex", alignItems: "center", gap: 16, position: "relative" }}>
+          <div style={{ width: 60, height: 60, borderRadius: "50%", border: `3px solid ${score > 0 ? G : "rgba(255,255,255,.2)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, position: "relative" }}>
+            <span style={{ fontSize: 20, fontWeight: 900, color: score > 0 ? G : "rgba(255,255,255,.4)" }}>{score > 0 ? score : "—"}</span>
+          </div>
+          <div>
+            <p style={{ fontSize: 15, fontWeight: 700, color: "white", marginBottom: 3 }}>Health Score</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,.5)", lineHeight: 1.4 }}>
+              {score > 0 ? (score >= 80 ? "🟢 Excellent! Keep it up" : "🟡 Good — book a checkup") : "Book your first test to see your score"}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="px-4 -mt-2 pb-24">
-        {/* Quick actions */}
-        <div className="grid grid-cols-4 gap-3 mb-6">
+      {/* Quick actions — float over gradient */}
+      <div style={{ margin: "-52px 16px 0", position: "relative", zIndex: 10 }} className="fade-up delay-2">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
           {[
-            {icon:"🧪",label:"Book",screen:"packages" as Screen},
-            {icon:"📅",label:"Bookings",screen:"bookings" as Screen},
-            {icon:"📄",label:"Reports",screen:"reports" as Screen},
-            {icon:"👤",label:"Profile",screen:"profile" as Screen},
-          ].map(a=>(
-            <button key={a.screen} onClick={()=>onNav(a.screen)}
-              className="flex flex-col items-center gap-2 p-3 rounded-2xl cursor-pointer transition-all hover:shadow-md"
-              style={{background:"#FFFFFF",border:"1px solid #E5E7EB"}}>
-              <span className="text-2xl">{a.icon}</span>
-              <span className="text-xs font-semibold" style={{color:"#4B5563"}}>{a.label}</span>
+            { emoji: "🧪", label: "Book Test", s: "packages" as Screen, accent: true },
+            { emoji: "📅", label: "My Bookings", s: "bookings" as Screen },
+            { emoji: "📄", label: "Reports", s: "reports" as Screen },
+            { emoji: "👤", label: "Profile", s: "profile" as Screen },
+          ].map(a => (
+            <button key={a.s} onClick={() => onNav(a.s)}
+              style={{
+                background: a.accent ? G : "white", borderRadius: 16, border: a.accent ? "none" : "1px solid #E2E8F0",
+                boxShadow: a.accent ? "0 8px 24px rgba(34,197,94,.3)" : "0 2px 8px rgba(11,37,69,.07)",
+                padding: "14px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", fontFamily: "inherit",
+              }}>
+              <span style={{ fontSize: 22 }}>{a.emoji}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: a.accent ? "white" : "#3D5A80", lineHeight: 1.2, textAlign: "center" }}>{a.label}</span>
             </button>
           ))}
         </div>
+      </div>
 
-        {/* Upcoming bookings */}
-        {upcoming.length>0 && (
-          <div className="mb-6">
-            <h2 className="text-base font-bold mb-3" style={{color:"#111827"}}>Upcoming Appointments</h2>
-            <div className="space-y-3">
-              {upcoming.map(b=>(
-                <button key={b.id} onClick={()=>onNav("bookings")}
-                  className="w-full text-left rounded-2xl p-4 cursor-pointer transition-all hover:shadow-md"
-                  style={{background:"#FFFFFF",border:"1px solid #E5E7EB"}}>
-                  <div className="flex items-start justify-between mb-2">
-                    <p className="font-bold text-sm" style={{color:"#111827"}}>{b.package?.name??"Health Checkup"}</p>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{background:STAGES[b.stage]?.bg??"#F3F4F6",color:STAGES[b.stage]?.text??"#374151"}}>{b.stage}</span>
+      <div style={{ padding: "20px 16px" }}>
+        {/* Upcoming appointments */}
+        {upcoming.length > 0 && (
+          <div style={{ marginBottom: 24 }} className="fade-up">
+            <p style={{ fontSize: 15, fontWeight: 800, color: N, marginBottom: 12 }}>Upcoming Appointments</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {upcoming.map(b => (
+                <button key={b.id} onClick={() => onNav("bookings")}
+                  style={{ background: "white", borderRadius: 18, border: "1px solid #E2E8F0", boxShadow: "0 2px 8px rgba(11,37,69,.06)", padding: 16, textAlign: "left", cursor: "pointer", width: "100%", fontFamily: "inherit" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: N, flex: 1, marginRight: 8 }}>{b.package?.name ?? "Health Checkup"}</p>
+                    <StagePill stage={b.stage} />
                   </div>
-                  <p className="text-sm mb-2" style={{color:"#6B7280"}}>{b.lab?.name??"—"}</p>
-                  <div className="flex gap-4">
-                    <span className="text-xs" style={{color:"#9CA3AF"}}>📅 {b.appointment_date}</span>
-                    <span className="text-xs" style={{color:"#9CA3AF"}}>⏰ {b.slot_time?.slice(0,5)}</span>
+                  <p style={{ fontSize: 13, color: "#7A90B3", marginBottom: 10 }}>{b.lab?.name ?? "—"} · {b.lab?.city ?? "—"}</p>
+                  <div style={{ display: "flex", gap: 16, fontSize: 12, color: "#94A3B8" }}>
+                    <span>📅 {b.appointment_date}</span>
+                    <span>⏰ {fmtTime(b.slot_time)}</span>
+                    <span>💳 {fmt(b.amount)}</span>
                   </div>
                 </button>
               ))}
@@ -279,132 +383,155 @@ function HomePage({ user, bookings, packages, loading, onNav, onRefresh }: { use
         )}
 
         {/* Packages */}
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-bold" style={{color:"#111827"}}>Health Packages</h2>
-          <button onClick={()=>onNav("packages")} className="text-sm font-semibold cursor-pointer" style={{color:"#22C55E"}}>See all →</button>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }} className="fade-up">
+          <p style={{ fontSize: 15, fontWeight: 800, color: N }}>Popular Packages</p>
+          <button onClick={() => onNav("packages")} style={{ fontSize: 13, fontWeight: 700, color: G, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>See all →</button>
         </div>
-        <div className="space-y-3">
-          {packages.slice(0,4).map(p=>(
-            <button key={p.id} onClick={()=>{onNav("packages");}}
-              className="w-full text-left rounded-2xl p-4 cursor-pointer transition-all hover:shadow-md"
-              style={{background:"#FFFFFF",border:"1px solid #E5E7EB"}}>
-              <div className="flex items-start justify-between">
-                <div className="flex-1 mr-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-bold text-sm" style={{color:"#111827"}}>{p.name}</p>
-                    {p.badge && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{background:"#FFFBEB",color:"#92400E"}}>{p.badge}</span>}
-                  </div>
-                  <p className="text-xs mb-2" style={{color:"#6B7280"}}>{p.test_count} tests{p.fasting_required?" · Fasting required":""}</p>
-                  {p.home_collection && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{background:"#EFF6FF",color:"#1D4ED8"}}>🏠 Home collection</span>}
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-lg font-black" style={{color:"#22C55E"}}>{fmt(p.base_price)}</p>
-                  {p.mrp&&p.mrp>p.base_price&&<p className="text-xs line-through" style={{color:"#D1D5DB"}}>{fmt(p.mrp)}</p>}
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* Bottom nav */}
-      <BottomNav current="home" onNav={onNav} />
+        {loading ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {[1, 2, 3].map(i => <div key={i} className="sk" style={{ height: 110 }} />)}
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {pkgs.slice(0, 4).map((p, i) => (
+              <button key={p.id} onClick={() => { /* navigate via state */ onNav("packages"); }}
+                className={`fade-up delay-${Math.min(i + 1, 3)}`}
+                style={{ background: "white", borderRadius: 18, border: "1px solid #E2E8F0", boxShadow: "0 2px 8px rgba(11,37,69,.06)", padding: 16, textAlign: "left", cursor: "pointer", width: "100%", fontFamily: "inherit" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div style={{ flex: 1, marginRight: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: N }}>{p.name}</p>
+                      {p.badge && <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 99, background: "#FFFBEB", color: "#92400E" }}>{p.badge}</span>}
+                    </div>
+                    <p style={{ fontSize: 12, color: "#7A90B3", marginBottom: 8, lineHeight: 1.4 }}>
+                      {p.test_count} tests{p.fasting_required ? " · Fasting required" : ""}
+                    </p>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {p.home_collection && <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 99, background: "#EFF6FF", color: "#1D4ED8" }}>🏠 Home collection</span>}
+                      {p.category && <span style={{ fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 99, background: "#F0F4F8", color: "#3D5A80" }}>{p.category}</span>}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <p style={{ fontSize: 20, fontWeight: 900, color: G }}>{fmt(p.base_price)}</p>
+                    {p.mrp && p.mrp > p.base_price && (
+                      <>
+                        <p style={{ fontSize: 11, color: "#CBD5E1", textDecoration: "line-through", marginTop: 1 }}>{fmt(p.mrp)}</p>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: "#D97706" }}>{Math.round((p.mrp - p.base_price) / p.mrp * 100)}% off</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <NavBar active="home" onNav={onNav} />
     </div>
   );
 }
 
-// ─── PACKAGES PAGE ─────────────────────────────────────────────────────────────
-function PackagesPage({ packages, onSelect, onBack }: { packages:Package[]; onSelect:(p:Package)=>void; onBack:()=>void }) {
-  const [search, setSearch] = useState("");
+// ─── Packages ─────────────────────────────────────────────────────────────────
+function Packages({ pkgs, onSelect, onBack }: { pkgs: Pkg[]; onSelect: (p: Pkg) => void; onBack: () => void }) {
+  const [q, setQ] = useState("");
   const [cat, setCat] = useState("All");
-  const cats = ["All", ...Array.from(new Set(packages.map(p=>p.category).filter((c):c is string=>!!c)))];
-  const filtered = packages.filter(p=>(cat==="All"||p.category===cat)&&(!search||p.name.toLowerCase().includes(search.toLowerCase())));
+  const cats = ["All", ...Array.from(new Set(pkgs.map(p => p.category).filter((c): c is string => !!c)))];
+  const filtered = pkgs.filter(p => (cat === "All" || p.category === cat) && (!q || p.name.toLowerCase().includes(q.toLowerCase())));
 
   return (
-    <div className="min-h-screen" style={{background:"#F9FAFB"}}>
-      {/* Header */}
-      <div className="px-5 pt-14 pb-6" style={{background:"linear-gradient(160deg, #0B2545 0%, #1B4B8A 100%)"}}>
-        <button onClick={onBack} className="text-white/60 text-sm mb-5 flex items-center gap-2 cursor-pointer hover:text-white/80">← Back</button>
-        <h1 className="text-2xl font-black text-white mb-5">Health Packages</h1>
-        <div className="rounded-2xl px-4 py-3 flex items-center gap-3 mb-4" style={{background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.15)"}}>
-          <span className="text-white/40">🔍</span>
-          <input className="flex-1 bg-transparent text-white text-sm outline-none placeholder-white/40" placeholder="Search packages…" value={search} onChange={e=>setSearch(e.target.value)} />
+    <div style={{ minHeight: "100svh", background: "#F0F4F8" }}>
+      <div style={{ background: navyGrad, padding: "52px 20px 24px" }}>
+        <BackHeader title="Health Packages" subtitle={`${filtered.length} available`} onBack={onBack} white />
+        <div style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.15)", borderRadius: 14, display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", marginBottom: 16 }}>
+          <span style={{ fontSize: 16, color: "rgba(255,255,255,.4)" }}>🔍</span>
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search tests & packages…"
+            style={{ flex: 1, background: "transparent", border: "none", fontSize: 15, color: "white", outline: "none", fontFamily: "inherit" }} />
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {cats.map(c=>(
-            <button key={c} onClick={()=>setCat(c)}
-              className="px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap cursor-pointer transition-all flex-shrink-0"
-              style={{background:cat===c?"#22C55E":"rgba(255,255,255,0.1)",color:"white"}}>
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+          {cats.map(c => (
+            <button key={c} onClick={() => setCat(c)}
+              style={{ padding: "8px 18px", borderRadius: 99, whiteSpace: "nowrap", cursor: "pointer", border: "none", fontFamily: "inherit", fontSize: 13, fontWeight: 700, background: cat === c ? G : "rgba(255,255,255,.12)", color: "white", boxShadow: cat === c ? "0 4px 12px rgba(34,197,94,.3)" : "none", transition: "all .15s", flexShrink: 0 }}>
               {c}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="px-4 py-4 pb-24 space-y-3">
-        {filtered.map(p=>(
-          <button key={p.id} onClick={()=>onSelect(p)}
-            className="w-full text-left rounded-2xl p-4 cursor-pointer transition-all hover:shadow-md"
-            style={{background:"#FFFFFF",border:"1px solid #E5E7EB"}}>
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex-1 mr-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="font-bold" style={{color:"#111827"}}>{p.name}</p>
-                  {p.badge && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{background:"#FFFBEB",color:"#92400E"}}>{p.badge}</span>}
+      <div style={{ padding: "16px 16px 32px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {filtered.map(p => (
+          <button key={p.id} onClick={() => onSelect(p)}
+            style={{ background: "white", borderRadius: 20, border: "1px solid #E2E8F0", boxShadow: "0 2px 10px rgba(11,37,69,.07)", padding: 18, textAlign: "left", cursor: "pointer", width: "100%", fontFamily: "inherit" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+              <div style={{ flex: 1, marginRight: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5, flexWrap: "wrap" }}>
+                  <p style={{ fontSize: 16, fontWeight: 800, color: N }}>{p.name}</p>
+                  {p.badge && <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 99, background: "#FFFBEB", color: "#92400E" }}>{p.badge}</span>}
                 </div>
-                {p.description && <p className="text-sm mb-2 leading-relaxed" style={{color:"#6B7280"}}>{p.description}</p>}
+                {p.description && <p style={{ fontSize: 13, color: "#7A90B3", lineHeight: 1.5, marginBottom: 4 }}>{p.description}</p>}
               </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-xl font-black" style={{color:"#22C55E"}}>{fmt(p.base_price)}</p>
-                {p.mrp&&p.mrp>p.base_price&&(
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <p style={{ fontSize: 22, fontWeight: 900, color: G }}>{fmt(p.base_price)}</p>
+                {p.mrp && p.mrp > p.base_price && (
                   <>
-                    <p className="text-xs line-through" style={{color:"#D1D5DB"}}>{fmt(p.mrp)}</p>
-                    <p className="text-xs font-bold" style={{color:"#D97706"}}>{Math.round((p.mrp-p.base_price)/p.mrp*100)}% off</p>
+                    <p style={{ fontSize: 12, color: "#CBD5E1", textDecoration: "line-through" }}>{fmt(p.mrp)}</p>
+                    <p style={{ fontSize: 12, fontWeight: 800, color: "#F59E0B" }}>{Math.round((p.mrp - p.base_price) / p.mrp * 100)}% off</p>
                   </>
                 )}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full" style={{background:"#F3F4F6",color:"#4B5563"}}>{p.test_count} tests</span>
-              {p.fasting_required && <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full" style={{background:"#FFFBEB",color:"#D97706"}}>⚠ Fasting</span>}
-              {p.home_collection && <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full" style={{background:"#EFF6FF",color:"#1D4ED8"}}>🏠 Home</span>}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 99, background: "#F0F4F8", color: "#3D5A80" }}>{p.test_count} tests</span>
+              {p.fasting_required && <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 99, background: "#FFFBEB", color: "#D97706" }}>⚠ Fasting</span>}
+              {p.home_collection && <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 99, background: "#EFF6FF", color: "#1D4ED8" }}>🏠 Home available</span>}
             </div>
-            <div className="mt-3 py-2.5 rounded-xl text-center font-bold text-sm" style={{background:"#22C55E",color:"white"}}>Book This Package →</div>
+            <div style={{ background: navyGrad, borderRadius: 12, padding: "11px", textAlign: "center", fontSize: 13, fontWeight: 700, color: "white" }}>
+              Book this package →
+            </div>
           </button>
         ))}
+        {filtered.length === 0 && (
+          <div style={{ padding: "60px 0", textAlign: "center" }}>
+            <p style={{ fontSize: 36, marginBottom: 12 }}>🔍</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: "#7A90B3" }}>No packages found</p>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// ─── SELECT LAB ────────────────────────────────────────────────────────────────
-function SelectLabPage({ pkg, labs, onSelect, onBack }: { pkg:Package; labs:Lab[]; onSelect:(l:Lab)=>void; onBack:()=>void }) {
+// ─── Select Lab ───────────────────────────────────────────────────────────────
+function SelectLab({ pkg, labs, onSelect, onBack }: { pkg: Pkg; labs: Lab[]; onSelect: (l: Lab) => void; onBack: () => void }) {
   return (
-    <div className="min-h-screen" style={{background:"#F9FAFB"}}>
-      <div className="px-5 pt-14 pb-6" style={{background:"linear-gradient(160deg, #0B2545 0%, #1B4B8A 100%)"}}>
-        <button onClick={onBack} className="text-white/60 text-sm mb-5 flex items-center gap-2 cursor-pointer">← Back</button>
-        <p className="text-sm font-semibold mb-1" style={{color:"#22C55E"}}>{pkg.name}</p>
-        <h1 className="text-2xl font-black text-white">Select Lab</h1>
-        <p className="text-sm mt-1" style={{color:"rgba(255,255,255,0.55)"}}>Choose a certified lab near you</p>
+    <div style={{ minHeight: "100svh", background: "#F0F4F8" }}>
+      <div style={{ background: navyGrad, padding: "52px 20px 24px" }}>
+        <BackHeader title="Select Lab" subtitle={pkg.name} onBack={onBack} white />
+        <div style={{ background: "rgba(255,255,255,.08)", borderRadius: 12, padding: "10px 14px" }}>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,.5)", fontWeight: 600 }}>💡 All labs are NABL certified and quality verified</p>
+        </div>
       </div>
-      <div className="px-4 py-4 pb-24 space-y-3">
-        {labs.map(l=>(
-          <button key={l.id} onClick={()=>onSelect(l)}
-            className="w-full text-left rounded-2xl p-4 cursor-pointer transition-all hover:shadow-md"
-            style={{background:"#FFFFFF",border:"1px solid #E5E7EB"}}>
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex-1 mr-3">
-                <p className="font-bold mb-1" style={{color:"#111827"}}>{l.name}</p>
-                <p className="text-sm" style={{color:"#6B7280"}}>{l.address||l.city}</p>
+      <div style={{ padding: "16px 16px 32px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {labs.map(l => (
+          <button key={l.id} onClick={() => onSelect(l)}
+            style={{ background: "white", borderRadius: 20, border: "1px solid #E2E8F0", boxShadow: "0 2px 10px rgba(11,37,69,.07)", padding: 18, textAlign: "left", cursor: "pointer", width: "100%", fontFamily: "inherit" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+              <div style={{ flex: 1, marginRight: 12 }}>
+                <p style={{ fontSize: 16, fontWeight: 800, color: N, marginBottom: 4 }}>{l.name}</p>
+                <p style={{ fontSize: 13, color: "#7A90B3" }}>{l.address ?? l.city}</p>
               </div>
-              <p className="text-xl font-bold flex-shrink-0" style={{color:"#F59E0B"}}>★ {l.rating}</p>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <p style={{ fontSize: 22, fontWeight: 900, color: "#F59E0B" }}>★ {l.rating}</p>
+                <p style={{ fontSize: 11, color: "#94A3B8" }}>TAT {l.avg_tat_hours}h</p>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {l.nabl_certified && <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{background:"#F0FDF4",color:"#16A34A"}}>✓ NABL</span>}
-              {l.home_collection && <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{background:"#EFF6FF",color:"#1D4ED8"}}>🏠 Home {fmt(l.home_collection_charge||0)}</span>}
-              <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full" style={{background:"#F3F4F6",color:"#6B7280"}}>TAT {l.avg_tat_hours}h</span>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+              {l.nabl_certified && <span style={{ fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 99, background: "#F0FDF4", color: "#15803D" }}>✓ NABL Certified</span>}
+              {l.home_collection && <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 99, background: "#EFF6FF", color: "#1D4ED8" }}>🏠 Home +{fmt(l.home_collection_charge)}</span>}
             </div>
-            <div className="mt-3 py-2.5 rounded-xl text-center font-bold text-sm" style={{background:"rgba(11,37,69,0.08)",color:"#0B2545"}}>Select This Lab →</div>
+            <div style={{ background: "#F0F4F8", borderRadius: 12, padding: "11px", textAlign: "center", fontSize: 13, fontWeight: 700, color: N }}>
+              Select this lab →
+            </div>
           </button>
         ))}
       </div>
@@ -412,35 +539,36 @@ function SelectLabPage({ pkg, labs, onSelect, onBack }: { pkg:Package; labs:Lab[
   );
 }
 
-// ─── SELECT SLOT ───────────────────────────────────────────────────────────────
-function SelectSlotPage({ pkg, lab, onSelect, onBack }: { pkg:Package; lab:Lab; onSelect:(d:string,s:string,t:string)=>void; onBack:()=>void }) {
+// ─── Select Slot ─────────────────────────────────────────────────────────────
+function SelectSlot({ pkg, lab, onSelect, onBack }: { pkg: Pkg; lab: Lab; onSelect: (d: string, s: string, t: string) => void; onBack: () => void }) {
   const [date, setDate] = useState("");
   const [slot, setSlot] = useState("");
   const [type, setType] = useState("walkin");
 
-  const dates = Array.from({length:7},(_,i)=>{
-    const d=new Date(); d.setDate(d.getDate()+i+1);
-    return { val:d.toISOString().split("T")[0], label:d.toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"}) };
+  const dates = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() + i + 1);
+    return { val: d.toISOString().split("T")[0], day: d.toLocaleDateString("en-IN", { weekday: "short" }), num: d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) };
   });
-  const slots = ["07:00","08:00","09:00","10:00","11:00","12:00","14:00","15:00","16:00","17:00","18:00","19:00"];
+  const slots = ["07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"];
 
   return (
-    <div className="min-h-screen" style={{background:"#F9FAFB"}}>
-      <div className="px-5 pt-14 pb-6" style={{background:"linear-gradient(160deg, #0B2545 0%, #1B4B8A 100%)"}}>
-        <button onClick={onBack} className="text-white/60 text-sm mb-5 flex items-center gap-2 cursor-pointer">← Back</button>
-        <p className="text-sm font-semibold mb-1" style={{color:"#22C55E"}}>{lab.name}</p>
-        <h1 className="text-2xl font-black text-white">Choose Slot</h1>
+    <div style={{ minHeight: "100svh", background: "#F0F4F8" }}>
+      <div style={{ background: navyGrad, padding: "52px 20px 24px" }}>
+        <BackHeader title="Choose Slot" subtitle={`${lab.name} · ${pkg.name}`} onBack={onBack} white />
       </div>
-      <div className="px-4 py-5 pb-32 space-y-5">
+      <div style={{ padding: "20px 16px 100px", display: "flex", flexDirection: "column", gap: 20 }}>
         {lab.home_collection && (
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{color:"#6B7280"}}>Collection Type</p>
-            <div className="grid grid-cols-2 gap-3">
-              {[{v:"walkin",l:"🏥 Walk-in"},{v:"Home Collection",l:`🏠 Home +${fmt(lab.home_collection_charge||0)}`}].map(t=>(
-                <button key={t.v} onClick={()=>setType(t.v)}
-                  className="py-3.5 rounded-2xl font-bold text-sm cursor-pointer transition-all"
-                  style={{border:`2px solid ${type===t.v?"#22C55E":"#E5E7EB"}`,background:type===t.v?"#DCFCE7":"#FFFFFF",color:type===t.v?"#16A34A":"#4B5563"}}>
-                  {t.l}
+            <p style={{ fontSize: 12, fontWeight: 800, color: "#7A90B3", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Collection Type</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {[
+                { v: "walkin", l: "🏥 Walk-in", sub: "Visit the lab" },
+                { v: "Home Collection", l: "🏠 Home", sub: `+${fmt(lab.home_collection_charge)}` },
+              ].map(t => (
+                <button key={t.v} onClick={() => setType(t.v)}
+                  style={{ padding: "14px 12px", borderRadius: 14, cursor: "pointer", fontFamily: "inherit", border: `2px solid ${type === t.v ? G : "#E2E8F0"}`, background: type === t.v ? "rgba(34,197,94,.06)" : "white", textAlign: "center", transition: "all .15s" }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: type === t.v ? GD : N, marginBottom: 3 }}>{t.l}</p>
+                  <p style={{ fontSize: 11, color: type === t.v ? G : "#94A3B8" }}>{t.sub}</p>
                 </button>
               ))}
             </div>
@@ -448,26 +576,25 @@ function SelectSlotPage({ pkg, lab, onSelect, onBack }: { pkg:Package; lab:Lab; 
         )}
 
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{color:"#6B7280"}}>Select Date</p>
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {dates.map(d=>(
-              <button key={d.val} onClick={()=>setDate(d.val)}
-                className="px-4 py-3 rounded-2xl text-center flex-shrink-0 cursor-pointer transition-all"
-                style={{border:`2px solid ${date===d.val?"#22C55E":"#E5E7EB"}`,background:date===d.val?"#DCFCE7":"#FFFFFF",minWidth:"80px"}}>
-                <p className="text-xs font-bold" style={{color:date===d.val?"#16A34A":"#4B5563"}}>{d.label}</p>
+          <p style={{ fontSize: 12, fontWeight: 800, color: "#7A90B3", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Select Date</p>
+          <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4 }}>
+            {dates.map(d => (
+              <button key={d.val} onClick={() => { setDate(d.val); setSlot(""); }}
+                style={{ flexShrink: 0, padding: "12px 14px", borderRadius: 16, cursor: "pointer", fontFamily: "inherit", border: `2px solid ${date === d.val ? G : "#E2E8F0"}`, background: date === d.val ? "rgba(34,197,94,.06)" : "white", textAlign: "center", minWidth: 72, transition: "all .15s" }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: date === d.val ? G : "#94A3B8", marginBottom: 3 }}>{d.day}</p>
+                <p style={{ fontSize: 13, fontWeight: 800, color: date === d.val ? GD : N }}>{d.num}</p>
               </button>
             ))}
           </div>
         </div>
 
         {date && (
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{color:"#6B7280"}}>Select Time</p>
-            <div className="grid grid-cols-4 gap-2">
-              {slots.map(s=>(
-                <button key={s} onClick={()=>setSlot(s)}
-                  className="py-3 rounded-xl font-bold text-sm cursor-pointer transition-all"
-                  style={{border:`2px solid ${slot===s?"#22C55E":"#E5E7EB"}`,background:slot===s?"#DCFCE7":"#FFFFFF",color:slot===s?"#16A34A":"#4B5563"}}>
+          <div className="fade-up">
+            <p style={{ fontSize: 12, fontWeight: 800, color: "#7A90B3", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>Select Time</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
+              {slots.map(s => (
+                <button key={s} onClick={() => setSlot(s)}
+                  style={{ padding: "12px 4px", borderRadius: 12, cursor: "pointer", fontFamily: "inherit", border: `2px solid ${slot === s ? G : "#E2E8F0"}`, background: slot === s ? "rgba(34,197,94,.06)" : "white", fontSize: 13, fontWeight: 700, color: slot === s ? GD : N, transition: "all .15s" }}>
                   {s}
                 </button>
               ))}
@@ -476,42 +603,42 @@ function SelectSlotPage({ pkg, lab, onSelect, onBack }: { pkg:Package; lab:Lab; 
         )}
 
         {pkg.fasting_required && (
-          <div className="rounded-2xl p-4" style={{background:"#FFFBEB",border:"1px solid #FDE68A"}}>
-            <p className="text-sm font-semibold" style={{color:"#92400E"}}>⚠ This test requires 8–10 hours fasting before your appointment.</p>
+          <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 14, padding: "13px 16px" }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "#92400E" }}>⚠ This test requires 8–10 hours of fasting before your appointment</p>
           </div>
         )}
 
-        <button onClick={()=>{if(date&&slot)onSelect(date,slot,type);}} disabled={!date||!slot}
-          className="w-full py-4 rounded-2xl font-bold text-base text-white disabled:opacity-40 cursor-pointer transition-all hover:opacity-90"
-          style={{background:"#22C55E",boxShadow:"0 8px 20px rgba(34,197,94,0.3)"}}>
-          Continue →
-        </button>
+        <Btn onClick={() => { if (date && slot) onSelect(date, slot, type); }} disabled={!date || !slot}>
+          Continue → {date && slot ? `${date} · ${slot}` : ""}
+        </Btn>
       </div>
     </div>
   );
 }
 
-// ─── CONFIRM PAGE ──────────────────────────────────────────────────────────────
-function ConfirmPage({ pkg, lab, date, slot, type, user, onSuccess, onBack }: { pkg:Package; lab:Lab; date:string; slot:string; type:string; user:UserData; onSuccess:(id:string)=>void; onBack:()=>void }) {
-  const [name, setName] = useState(user.name||"");
+// ─── Confirm Booking ─────────────────────────────────────────────────────────
+function Confirm({ pkg, lab, date, slot, type, user, onSuccess, onBack }: { pkg: Pkg; lab: Lab; date: string; slot: string; type: string; user: User; onSuccess: (id: string) => void; onBack: () => void }) {
+  const [name, setName] = useState(user.name || "");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("Male");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
-  const charge = type==="Home Collection"?(lab.home_collection_charge||0):0;
-  const total = pkg.base_price+charge;
+  const charge = type === "Home Collection" ? (lab.home_collection_charge || 0) : 0;
+  const total = pkg.base_price + charge;
+
+  const inp: React.CSSProperties = { width: "100%", background: "white", border: "1.5px solid #E2E8F0", borderRadius: 12, padding: "12px 14px", fontSize: 14, color: N, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
 
   async function book() {
-    if (!name.trim()||!age.trim()) { setErr("Enter patient name and age"); return; }
+    if (!name.trim() || !age.trim()) { setErr("Enter patient name and age"); return; }
     setLoading(true); setErr("");
-    const id = `CK-APT-${Date.now().toString(36).toUpperCase().slice(-8)}`;
-    const{error}=await supabase.from("bookings").insert({
-      id, lab_id:lab.id, package_id:pkg.id,
-      patient_name:name.trim(), patient_age:parseInt(age)||0, patient_gender:gender,
-      patient_phone:user.phone, appointment_date:date, slot_time:slot+":00",
-      collection_type:type, amount:total, discount:0, status:"pending_payment",
-      stage:"New", sla_status:"On Track", is_corporate:false,
-      created_at:new Date().toISOString(), updated_at:new Date().toISOString(),
+    const id = "CK" + Date.now().toString(36).toUpperCase().slice(-8);
+    const { error } = await supabase.from("bookings").insert({
+      id, lab_id: lab.id, package_id: pkg.id,
+      patient_name: name.trim(), patient_age: parseInt(age) || 0, patient_gender: gender,
+      patient_phone: user.phone, appointment_date: date, slot_time: slot + ":00",
+      collection_type: type, amount: total, discount: 0,
+      status: "pending_payment", stage: "New", sla_status: "On Track", is_corporate: false,
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     });
     setLoading(false);
     if (error) { setErr(error.message); return; }
@@ -519,49 +646,50 @@ function ConfirmPage({ pkg, lab, date, slot, type, user, onSuccess, onBack }: { 
   }
 
   return (
-    <div className="min-h-screen pb-32" style={{background:"#F9FAFB"}}>
-      <div className="px-5 pt-14 pb-6" style={{background:"linear-gradient(160deg, #0B2545 0%, #1B4B8A 100%)"}}>
-        <button onClick={onBack} className="text-white/60 text-sm mb-5 flex items-center gap-2 cursor-pointer">← Back</button>
-        <h1 className="text-2xl font-black text-white">Confirm Booking</h1>
+    <div style={{ minHeight: "100svh", background: "#F0F4F8" }}>
+      <div style={{ background: navyGrad, padding: "52px 20px 24px" }}>
+        <BackHeader title="Confirm Booking" onBack={onBack} white />
       </div>
-      <div className="px-4 py-5 space-y-4">
+      <div style={{ padding: "16px 16px 100px", display: "flex", flexDirection: "column", gap: 14 }}>
         {/* Summary */}
-        <div className="rounded-2xl p-4" style={{background:"#FFFFFF",border:"1px solid #E5E7EB"}}>
-          <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{color:"#9CA3AF"}}>Booking Summary</p>
-          {[["Package",pkg.name],["Lab",lab.name],["Date",date],["Time",slot],["Type",type]].map(([k,v])=>(
-            <div key={k as string} className="flex justify-between py-2.5" style={{borderBottom:"1px solid #F3F4F6"}}>
-              <span className="text-sm" style={{color:"#6B7280"}}>{k as string}</span>
-              <span className="text-sm font-semibold" style={{color:"#111827"}}>{v as string}</span>
+        <div style={{ background: "white", borderRadius: 20, border: "1px solid #E2E8F0", boxShadow: "0 2px 8px rgba(11,37,69,.06)", padding: 18 }}>
+          <p style={{ fontSize: 12, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 12 }}>Booking Summary</p>
+          {[["Package", pkg.name], ["Lab", lab.name], ["Date", date], ["Time", slot], ["Type", type]].map(([k, v]) => (
+            <div key={k as string} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: "1px solid #F8FAFC" }}>
+              <span style={{ fontSize: 13, color: "#7A90B3" }}>{k as string}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: N }}>{v as string}</span>
             </div>
           ))}
         </div>
 
         {/* Patient details */}
-        <div className="rounded-2xl p-4" style={{background:"#FFFFFF",border:"1px solid #E5E7EB"}}>
-          <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{color:"#9CA3AF"}}>Patient Details</p>
-          <div className="space-y-3">
+        <div style={{ background: "white", borderRadius: 20, border: "1px solid #E2E8F0", boxShadow: "0 2px 8px rgba(11,37,69,.06)", padding: 18 }}>
+          <p style={{ fontSize: 12, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 14 }}>Patient Details</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{color:"#9CA3AF"}}>Full Name *</p>
-              <input value={name} onChange={e=>setName(e.target.value)} placeholder="As per ID proof"
-                className="w-full rounded-xl px-3.5 py-3 text-sm outline-none transition-all"
-                style={{border:"1.5px solid #E5E7EB",color:"#111827"}}
-                onFocus={e=>{e.target.style.borderColor="#22C55E";}} onBlur={e=>{e.target.style.borderColor="#E5E7EB";}} />
+              <p style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", marginBottom: 6 }}>Full Name *</p>
+              <input style={inp} value={name} onChange={e => setName(e.target.value)} placeholder="As per ID proof"
+                onFocus={e => { e.target.style.borderColor = G; e.target.style.boxShadow = `0 0 0 3px rgba(34,197,94,.1)`; }}
+                onBlur={e => { e.target.style.borderColor = "#E2E8F0"; e.target.style.boxShadow = "none"; }} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{color:"#9CA3AF"}}>Age *</p>
-                <input value={age} onChange={e=>setAge(e.target.value)} placeholder="25" inputMode="numeric"
-                  className="w-full rounded-xl px-3.5 py-3 text-sm outline-none"
-                  style={{border:"1.5px solid #E5E7EB",color:"#111827"}} />
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", marginBottom: 6 }}>Age *</p>
+                <input style={inp} value={age} onChange={e => setAge(e.target.value)} placeholder="25" inputMode="numeric"
+                  onFocus={e => { e.target.style.borderColor = G; e.target.style.boxShadow = `0 0 0 3px rgba(34,197,94,.1)`; }}
+                  onBlur={e => { e.target.style.borderColor = "#E2E8F0"; e.target.style.boxShadow = "none"; }} />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{color:"#9CA3AF"}}>Gender</p>
-                <div className="flex gap-1.5">
-                  {["M","F","O"].map((g,i)=>{
-                    const full=["Male","Female","Other"][i];
-                    return <button key={g} onClick={()=>setGender(full)}
-                      className="flex-1 py-3 rounded-xl text-xs font-bold cursor-pointer transition-all"
-                      style={{border:`1.5px solid ${gender===full?"#22C55E":"#E5E7EB"}`,background:gender===full?"#DCFCE7":"#FFFFFF",color:gender===full?"#16A34A":"#6B7280"}}>{g}</button>;
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", marginBottom: 6 }}>Gender</p>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {["M", "F", "O"].map((g, i) => {
+                    const full = ["Male", "Female", "Other"][i];
+                    return (
+                      <button key={g} onClick={() => setGender(full)}
+                        style={{ flex: 1, padding: "12px 0", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", border: `1.5px solid ${gender === full ? G : "#E2E8F0"}`, background: gender === full ? "rgba(34,197,94,.06)" : "white", color: gender === full ? GD : "#7A90B3" }}>
+                        {g}
+                      </button>
+                    );
                   })}
                 </div>
               </div>
@@ -569,257 +697,265 @@ function ConfirmPage({ pkg, lab, date, slot, type, user, onSuccess, onBack }: { 
           </div>
         </div>
 
-        {/* Total */}
-        <div className="rounded-2xl p-4" style={{background:"#DCFCE7",border:"1px solid #BBF7D0"}}>
-          {charge>0 && <div className="flex justify-between text-sm mb-2"><span style={{color:"#4B5563"}}>Package</span><span style={{color:"#111827"}}>{fmt(pkg.base_price)}</span></div>}
-          {charge>0 && <div className="flex justify-between text-sm mb-2"><span style={{color:"#4B5563"}}>Home Collection</span><span style={{color:"#111827"}}>{fmt(charge)}</span></div>}
-          <div className="flex justify-between items-center" style={charge>0?{borderTop:"1px solid #BBF7D0",paddingTop:"8px"}:{}}>
-            <span className="font-bold" style={{color:"#111827"}}>Total Amount</span>
-            <span className="text-2xl font-black" style={{color:"#16A34A"}}>{fmt(total)}</span>
+        {/* Price */}
+        <div style={{ background: "rgba(34,197,94,.06)", border: "1.5px solid rgba(34,197,94,.2)", borderRadius: 16, padding: 16 }}>
+          {charge > 0 && (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
+                <span style={{ color: "#7A90B3" }}>Package price</span><span style={{ color: N, fontWeight: 600 }}>{fmt(pkg.base_price)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 12, paddingBottom: 12, borderBottom: "1px solid rgba(34,197,94,.15)" }}>
+                <span style={{ color: "#7A90B3" }}>Home collection</span><span style={{ color: N, fontWeight: 600 }}>{fmt(charge)}</span>
+              </div>
+            </>
+          )}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: N }}>Total Amount</span>
+            <span style={{ fontSize: 26, fontWeight: 900, color: GD }}>{fmt(total)}</span>
           </div>
         </div>
 
-        {err && <p className="text-red-500 text-sm font-medium text-center">{err}</p>}
-
-        <button onClick={book} disabled={loading}
-          className="w-full py-4 rounded-2xl font-bold text-base text-white disabled:opacity-50 cursor-pointer transition-all hover:opacity-90"
-          style={{background:"#22C55E",boxShadow:"0 8px 20px rgba(34,197,94,0.3)"}}>
-          {loading ? "Processing…" : `Pay ${fmt(total)} & Confirm →`}
-        </button>
-        <p className="text-xs text-center" style={{color:"#9CA3AF"}}>Secure payment via Razorpay · Free cancellation</p>
+        {err && <p style={{ fontSize: 13, color: "#EF4444", fontWeight: 600, textAlign: "center" }}>{err}</p>}
+        <Btn onClick={book} loading={loading} disabled={!name.trim() || !age.trim()}>Pay {fmt(total)} & Confirm →</Btn>
+        <p style={{ fontSize: 11, textAlign: "center", color: "#94A3B8" }}>🔒 Secure booking · Free cancellation within 2 hours</p>
       </div>
     </div>
   );
 }
 
-// ─── SUCCESS PAGE ─────────────────────────────────────────────────────────────
-function SuccessPage({ bookingId, onHome }: { bookingId:string; onHome:()=>void }) {
+// ─── Success ─────────────────────────────────────────────────────────────────
+function Success({ id, onHome }: { id: string; onHome: () => void }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{background:"linear-gradient(160deg, #0B2545 0%, #1B4B8A 100%)"}}>
-      <div className="fade-up text-center">
-        <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6"
-          style={{background:"#22C55E",boxShadow:"0 20px 50px rgba(34,197,94,0.5)"}}>
-          <span className="text-5xl text-white">✓</span>
+    <div style={{ minHeight: "100svh", background: navyGrad, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 28px" }}>
+      <div className="scale-in" style={{ textAlign: "center", maxWidth: 360 }}>
+        <div style={{ width: 100, height: 100, borderRadius: "50%", background: G, boxShadow: "0 20px 60px rgba(34,197,94,.5)", margin: "0 auto 28px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="52" height="52" viewBox="0 0 24 24" fill="none">
+            <path d="M20 6L9 17L4 12" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
-        <h1 className="text-3xl font-black text-white mb-2" style={{letterSpacing:"-0.5px"}}>Booking Confirmed!</h1>
-        <p className="text-base mb-4" style={{color:"rgba(255,255,255,0.6)"}}>Lab will confirm within 2 hours</p>
-        <p className="font-mono text-sm mb-8 px-4 py-2 rounded-full inline-block" style={{background:"rgba(34,197,94,0.2)",color:"#22C55E"}}>{bookingId}</p>
-        <div className="rounded-2xl p-4 mb-8 max-w-sm text-center" style={{background:"rgba(255,255,255,0.08)"}}>
-          <p className="text-sm" style={{color:"rgba(255,255,255,0.6)"}}>📱 You will receive a WhatsApp confirmation once the lab confirms your slot</p>
+        <h1 style={{ fontSize: 34, fontWeight: 900, color: "white", letterSpacing: "-1px", marginBottom: 10 }}>Booking Confirmed!</h1>
+        <p style={{ fontSize: 16, color: "rgba(255,255,255,.55)", marginBottom: 20, lineHeight: 1.5 }}>Lab will confirm your slot within 2 hours via WhatsApp</p>
+        <div style={{ background: "rgba(34,197,94,.15)", border: "1px solid rgba(34,197,94,.3)", borderRadius: 12, padding: "10px 20px", display: "inline-block", marginBottom: 32 }}>
+          <span style={{ fontFamily: "monospace", fontSize: 15, color: G, fontWeight: 700 }}>{id}</span>
         </div>
-        <button onClick={onHome}
-          className="px-8 py-4 rounded-2xl font-bold text-base cursor-pointer transition-all hover:opacity-90"
-          style={{border:"2px solid rgba(255,255,255,0.3)",color:"white",background:"rgba(255,255,255,0.1)"}}>
-          ← Back to Home
-        </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <Btn onClick={onHome}>← Back to Home</Btn>
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── MY BOOKINGS ──────────────────────────────────────────────────────────────
-function BookingsPage({ bookings, loading, onRefresh, onDetail, onBack }: { bookings:Booking[]; loading:boolean; onRefresh:()=>void; onDetail:(b:Booking)=>void; onBack:()=>void }) {
-  const [tab, setTab] = useState<"Active"|"Past">("Active");
-  const active = bookings.filter(b=>!["Received","Rejected"].includes(b.stage));
-  const past = bookings.filter(b=>["Received","Rejected"].includes(b.stage));
-  const shown = tab==="Active"?active:past;
+// ─── My Bookings ─────────────────────────────────────────────────────────────
+function Bookings({ bookings, loading, onDetail, onRefresh, onNav }: { bookings: Booking[]; loading: boolean; onDetail: (b: Booking) => void; onRefresh: () => void; onNav: (s: Screen) => void }) {
+  const [tab, setTab] = useState<"Active" | "Past">("Active");
+  const active = bookings.filter(b => !["Received", "Rejected", "No Show"].includes(b.stage));
+  const past = bookings.filter(b => ["Received", "Rejected", "No Show"].includes(b.stage));
+  const shown = tab === "Active" ? active : past;
 
   return (
-    <div className="min-h-screen" style={{background:"#F9FAFB"}}>
-      <div className="px-5 pt-14 pb-5" style={{background:"linear-gradient(160deg, #0B2545 0%, #1B4B8A 100%)"}}>
-        <button onClick={onBack} className="text-white/60 text-sm mb-5 flex items-center gap-2 cursor-pointer">← Back</button>
-        <h1 className="text-2xl font-black text-white mb-5">My Bookings</h1>
-        <div className="flex gap-1 p-1 rounded-2xl" style={{background:"rgba(255,255,255,0.1)"}}>
-          {(["Active","Past"] as const).map(t=>(
-            <button key={t} onClick={()=>setTab(t)}
-              className="flex-1 py-2.5 rounded-xl font-bold text-sm cursor-pointer transition-all"
-              style={{background:tab===t?"#FFFFFF":"transparent",color:tab===t?"#0B2545":"rgba(255,255,255,0.7)"}}>
-              {t} ({t==="Active"?active.length:past.length})
+    <div style={{ minHeight: "100svh", background: "#F0F4F8", paddingBottom: 80 }}>
+      <div style={{ background: navyGrad, padding: "52px 20px 20px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 900, color: "white" }}>My Bookings</h1>
+          <button onClick={onRefresh} style={{ background: "rgba(255,255,255,.12)", border: "none", borderRadius: 10, padding: "6px 12px", color: "white", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>↺ Refresh</button>
+        </div>
+        <div style={{ display: "flex", gap: 4, background: "rgba(255,255,255,.1)", borderRadius: 14, padding: 4 }}>
+          {(["Active", "Past"] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              style={{ flex: 1, padding: "10px", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", border: "none", background: tab === t ? "white" : "transparent", color: tab === t ? N : "rgba(255,255,255,.6)", transition: "all .2s" }}>
+              {t} ({t === "Active" ? active.length : past.length})
             </button>
           ))}
         </div>
       </div>
-      <div className="px-4 py-4 pb-24 space-y-3">
-        {loading ? <div className="py-20 text-center"><div className="w-8 h-8 border-2 border-gray-200 border-t-[#22C55E] rounded-full animate-spin mx-auto" /></div>
-        : shown.length===0 ? (
-          <div className="py-20 text-center"><p className="text-4xl mb-4">📅</p><p className="font-semibold text-gray-500">No {tab.toLowerCase()} bookings</p></div>
-        ) : shown.map(b=>(
-          <button key={b.id} onClick={()=>onDetail(b)}
-            className="w-full text-left rounded-2xl p-4 cursor-pointer transition-all hover:shadow-md"
-            style={{background:"#FFFFFF",border:"1px solid #E5E7EB"}}>
-            <div className="flex items-start justify-between mb-2">
-              <p className="font-bold" style={{color:"#111827"}}>{b.package?.name??"Health Checkup"}</p>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ml-2" style={{background:STAGES[b.stage]?.bg??"#F3F4F6",color:STAGES[b.stage]?.text??"#374151"}}>{b.stage}</span>
-            </div>
-            <p className="text-sm mb-3" style={{color:"#6B7280"}}>{b.lab?.name??"—"}</p>
-            <div className="flex gap-4 text-xs" style={{color:"#9CA3AF"}}>
-              <span>📅 {b.appointment_date}</span>
-              <span>⏰ {b.slot_time?.slice(0,5)}</span>
-              <span>💳 {fmt(b.amount)}</span>
-            </div>
-            {b.stage==="Received" && (
-              <div className="mt-3 py-2.5 rounded-xl text-center text-sm font-bold" style={{background:"#F0FDF4",color:"#16A34A"}}>📄 Report ready — tap to view</div>
-            )}
-          </button>
-        ))}
-      </div>
-      <BottomNav current="bookings" onNav={s=>s==="home"?onBack():s==="bookings"?onRefresh():null} />
-    </div>
-  );
-}
-
-// ─── BOOKING DETAIL ────────────────────────────────────────────────────────────
-function BookingDetailPage({ booking: b, onBack }: { booking:Booking; onBack:()=>void }) {
-  return (
-    <div className="min-h-screen" style={{background:"#F9FAFB"}}>
-      <div className="px-5 pt-14 pb-6" style={{background:"linear-gradient(160deg, #0B2545 0%, #1B4B8A 100%)"}}>
-        <button onClick={onBack} className="text-white/60 text-sm mb-5 flex items-center gap-2 cursor-pointer">← Bookings</button>
-        <h1 className="text-2xl font-black text-white">{b.id}</h1>
-      </div>
-      <div className="px-4 py-5 pb-24 space-y-4">
-        <div className="rounded-2xl p-4" style={{background:"#FFFFFF",border:"1px solid #E5E7EB"}}>
-          {[["Package",b.package?.name??"—"],["Lab",b.lab?.name??"—"],["Date",b.appointment_date],["Slot",b.slot_time?.slice(0,5)??"—"],["Type",b.collection_type],["Amount",fmt(b.amount)]].map(([k,v])=>(
-            <div key={k as string} className="flex justify-between py-3" style={{borderBottom:"1px solid #F3F4F6"}}>
-              <span className="text-sm" style={{color:"#6B7280"}}>{k as string}</span>
-              <span className="text-sm font-semibold" style={{color:"#111827"}}>{v as string}</span>
-            </div>
-          ))}
-          <div className="flex justify-between items-center py-3">
-            <span className="text-sm" style={{color:"#6B7280"}}>Status</span>
-            <span className="text-[11px] font-bold px-2.5 py-1 rounded-full" style={{background:STAGES[b.stage]?.bg??"#F3F4F6",color:STAGES[b.stage]?.text??"#374151"}}>{b.stage}</span>
+      <div style={{ padding: "16px 16px 0", display: "flex", flexDirection: "column", gap: 10 }}>
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => <div key={i} className="sk" style={{ height: 120 }} />)
+        ) : shown.length === 0 ? (
+          <div style={{ padding: "60px 0", textAlign: "center" }}>
+            <p style={{ fontSize: 40, marginBottom: 12 }}>📅</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#7A90B3" }}>No {tab.toLowerCase()} bookings</p>
+            {tab === "Active" && <button onClick={() => onNav("packages")} style={{ marginTop: 16, padding: "10px 24px", borderRadius: 12, background: G, color: "white", border: "none", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: 14 }}>Book now →</button>}
           </div>
-        </div>
-        {b.report_url && (
-          <a href={b.report_url} target="_blank" rel="noreferrer"
-            className="block w-full py-4 rounded-2xl text-center font-bold text-sm cursor-pointer" style={{background:"#F0FDF4",color:"#16A34A",border:"1.5px solid #BBF7D0"}}>
-            📄 View Report PDF
-          </a>
+        ) : (
+          shown.map(b => (
+            <button key={b.id} onClick={() => onDetail(b)}
+              style={{ background: "white", borderRadius: 18, border: "1px solid #E2E8F0", boxShadow: "0 2px 8px rgba(11,37,69,.06)", padding: 16, textAlign: "left", cursor: "pointer", width: "100%", fontFamily: "inherit" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                <p style={{ fontSize: 15, fontWeight: 700, color: N, flex: 1, marginRight: 8 }}>{b.package?.name ?? "Health Checkup"}</p>
+                <StagePill stage={b.stage} />
+              </div>
+              <p style={{ fontSize: 13, color: "#7A90B3", marginBottom: 10 }}>{b.lab?.name ?? "—"}</p>
+              <div style={{ display: "flex", gap: 14, fontSize: 12, color: "#94A3B8", flexWrap: "wrap" }}>
+                <span>📅 {b.appointment_date}</span>
+                <span>⏰ {fmtTime(b.slot_time)}</span>
+                <span>💳 {fmt(b.amount)}</span>
+              </div>
+              {b.stage === "Received" && (
+                <div style={{ marginTop: 12, padding: "10px", borderRadius: 10, background: "#F0FDF4", textAlign: "center", fontSize: 13, fontWeight: 700, color: "#15803D" }}>
+                  📄 Report ready — tap to view
+                </div>
+              )}
+            </button>
+          ))
         )}
       </div>
+      <NavBar active="bookings" onNav={onNav} />
     </div>
   );
 }
 
-// ─── REPORTS PAGE ─────────────────────────────────────────────────────────────
-function ReportsPage({ bookings, onBack }: { bookings:Booking[]; onBack:()=>void }) {
+// ─── Booking Detail ───────────────────────────────────────────────────────────
+function Detail({ booking: b, onBack }: { booking: Booking; onBack: () => void }) {
   return (
-    <div className="min-h-screen" style={{background:"#F9FAFB"}}>
-      <div className="px-5 pt-14 pb-6" style={{background:"linear-gradient(160deg, #0B2545 0%, #1B4B8A 100%)"}}>
-        <button onClick={onBack} className="text-white/60 text-sm mb-5 flex items-center gap-2 cursor-pointer">← Back</button>
-        <h1 className="text-2xl font-black text-white">My Reports</h1>
-        <p className="text-sm mt-1" style={{color:"rgba(255,255,255,0.55)"}}>{bookings.length} report{bookings.length!==1?"s":""} available</p>
+    <div style={{ minHeight: "100svh", background: "#F0F4F8" }}>
+      <div style={{ background: navyGrad, padding: "52px 20px 24px" }}>
+        <BackHeader title="Booking Detail" subtitle={b.id} onBack={onBack} white />
       </div>
-      <div className="px-4 py-4 pb-24 space-y-3">
-        {bookings.length===0 ? (
-          <div className="py-20 text-center"><p className="text-4xl mb-4">📄</p><p className="font-semibold" style={{color:"#6B7280"}}>No reports yet</p><p className="text-sm mt-2" style={{color:"#9CA3AF"}}>Reports appear once lab uploads them</p></div>
-        ) : bookings.map(b=>(
-          <div key={b.id} className="rounded-2xl p-4" style={{background:"#FFFFFF",border:"1px solid #E5E7EB"}}>
-            <p className="font-bold mb-1" style={{color:"#111827"}}>{b.package?.name??"Health Checkup"}</p>
-            <p className="text-sm mb-1" style={{color:"#6B7280"}}>{b.lab?.name??"—"}</p>
-            <p className="text-xs mb-3" style={{color:"#9CA3AF"}}>📅 {b.appointment_date}</p>
+      <div style={{ padding: "16px 16px 40px", display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ background: "white", borderRadius: 20, border: "1px solid #E2E8F0", padding: 18 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <p style={{ fontSize: 16, fontWeight: 800, color: N }}>{b.package?.name ?? "Health Checkup"}</p>
+            <StagePill stage={b.stage} />
+          </div>
+          {[
+            ["Lab", b.lab?.name ?? "—"],
+            ["Date", b.appointment_date],
+            ["Time", fmtTime(b.slot_time)],
+            ["Type", b.collection_type],
+            ["Amount", fmt(b.amount)],
+            ["Patient", b.patient_name],
+            ["Phone", b.patient_phone],
+          ].map(([k, v]) => (
+            <div key={k as string} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: "1px solid #F8FAFC" }}>
+              <span style={{ fontSize: 13, color: "#7A90B3" }}>{k as string}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: N }}>{v as string}</span>
+            </div>
+          ))}
+        </div>
+        {b.report_url && (
+          <a href={b.report_url} target="_blank" rel="noreferrer" style={{ display: "block", textDecoration: "none" }}>
+            <div style={{ background: "#F0FDF4", border: "1.5px solid #BBF7D0", borderRadius: 16, padding: 16, textAlign: "center", fontSize: 15, fontWeight: 700, color: "#15803D" }}>
+              📄 View Report PDF →
+            </div>
+          </a>
+        )}
+        <div style={{ background: "#F0F4F8", borderRadius: 14, padding: "12px 16px" }}>
+          <p style={{ fontSize: 12, color: "#94A3B8", marginBottom: 4 }}>Need help?</p>
+          <p style={{ fontSize: 13, color: "#7A90B3" }}>Call your lab or contact Checkupify support at <strong>support@checkupify.com</strong></p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Reports ─────────────────────────────────────────────────────────────────
+function Reports({ bookings, onNav }: { bookings: Booking[]; onNav: (s: Screen) => void }) {
+  return (
+    <div style={{ minHeight: "100svh", background: "#F0F4F8", paddingBottom: 80 }}>
+      <div style={{ background: navyGrad, padding: "52px 20px 24px" }}>
+        <h1 style={{ fontSize: 24, fontWeight: 900, color: "white", marginBottom: 4 }}>My Reports</h1>
+        <p style={{ fontSize: 14, color: "rgba(255,255,255,.5)" }}>{bookings.length} report{bookings.length !== 1 ? "s" : ""} available</p>
+      </div>
+      <div style={{ padding: "16px 16px 0", display: "flex", flexDirection: "column", gap: 12 }}>
+        {bookings.length === 0 ? (
+          <div style={{ padding: "60px 0", textAlign: "center" }}>
+            <p style={{ fontSize: 40, marginBottom: 12 }}>📄</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#7A90B3" }}>No reports yet</p>
+            <p style={{ fontSize: 13, color: "#94A3B8", marginTop: 6 }}>Reports appear here once your lab uploads them</p>
+          </div>
+        ) : bookings.map(b => (
+          <div key={b.id} style={{ background: "white", borderRadius: 18, border: "1px solid #E2E8F0", padding: 16 }}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: N, marginBottom: 4 }}>{b.package?.name ?? "Health Checkup"}</p>
+            <p style={{ fontSize: 13, color: "#7A90B3", marginBottom: 4 }}>{b.lab?.name ?? "—"}</p>
+            <p style={{ fontSize: 12, color: "#94A3B8", marginBottom: 12 }}>📅 {b.appointment_date}</p>
             {b.report_url ? (
-              <a href={b.report_url} target="_blank" rel="noreferrer"
-                className="block py-2.5 rounded-xl text-center text-sm font-bold" style={{background:"#F0FDF4",color:"#16A34A",border:"1px solid #BBF7D0"}}>
-                📄 View Report PDF
+              <a href={b.report_url} target="_blank" rel="noreferrer" style={{ display: "block", textDecoration: "none" }}>
+                <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 12, padding: 11, textAlign: "center", fontSize: 13, fontWeight: 700, color: "#15803D" }}>📄 View Report PDF</div>
               </a>
             ) : (
-              <div className="py-2.5 rounded-xl text-center text-xs font-semibold" style={{background:"#FFFBEB",color:"#D97706"}}>⏳ Processing — coming soon</div>
+              <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 12, padding: 11, textAlign: "center", fontSize: 12, fontWeight: 700, color: "#D97706" }}>⏳ Processing — coming soon</div>
             )}
           </div>
         ))}
       </div>
-      <BottomNav current="reports" onNav={s=>s==="home"?onBack():null} />
+      <NavBar active="reports" onNav={onNav} />
     </div>
   );
 }
 
-// ─── PROFILE PAGE ─────────────────────────────────────────────────────────────
-function ProfilePage({ user, bookings, onSave, onLogout, onBack }: { user:UserData; bookings:Booking[]; onSave:(u:UserData)=>void; onLogout:()=>void; onBack:()=>void }) {
-  const [name, setName] = useState(user.name||"");
-  const [email, setEmail] = useState(user.email||"");
-  const [city, setCity] = useState(user.city||"");
+// ─── Profile ─────────────────────────────────────────────────────────────────
+function Profile({ user, bookings, onSave, onLogout, onNav }: { user: User; bookings: Booking[]; onSave: (u: User) => void; onLogout: () => void; onNav: (s: Screen) => void }) {
+  const [name, setName] = useState(user.name || "");
+  const [email, setEmail] = useState(user.email || "");
+  const [city, setCity] = useState(user.city || "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const totalSpend = bookings.reduce((s,b)=>s+b.amount,0);
+  const totalSpend = bookings.reduce((s, b) => s + b.amount, 0);
+  const inp: React.CSSProperties = { width: "100%", background: "white", border: "1.5px solid #E2E8F0", borderRadius: 12, padding: "12px 14px", fontSize: 14, color: N, outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
 
   async function save() {
     setSaving(true);
-    await supabase.from("users").update({name,email,city}).eq("phone",user.phone);
-    onSave({...user,name,email,city});
+    await supabase.from("users").update({ name, email, city }).eq("phone", user.phone);
+    onSave({ ...user, name, email, city });
     setSaving(false); setSaved(true);
-    setTimeout(()=>setSaved(false),2500);
+    setTimeout(() => setSaved(false), 3000);
   }
 
   return (
-    <div className="min-h-screen" style={{background:"#F9FAFB"}}>
-      <div className="px-5 pt-14 pb-8 text-center" style={{background:"linear-gradient(160deg, #0B2545 0%, #1B4B8A 100%)"}}>
-        <button onClick={onBack} className="text-white/60 text-sm mb-5 flex items-center gap-2 cursor-pointer">← Back</button>
-        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl font-black text-white" style={{background:"#22C55E"}}>
-          {(user.name?.[0]||"U").toUpperCase()}
+    <div style={{ minHeight: "100svh", background: "#F0F4F8", paddingBottom: 80 }}>
+      <div style={{ background: navyGrad, padding: "52px 20px 32px", textAlign: "center" }}>
+        <div style={{ width: 72, height: 72, borderRadius: "50%", background: G, border: "3px solid rgba(255,255,255,.25)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontSize: 28, fontWeight: 900, color: "white", boxShadow: "0 8px 24px rgba(34,197,94,.3)" }}>
+          {(user.name?.[0] || "U").toUpperCase()}
         </div>
-        <p className="text-xl font-black text-white mb-1">{user.name||"Patient"}</p>
-        <p className="text-sm" style={{color:"rgba(255,255,255,0.55)"}}>{user.phone}</p>
-        <div className="flex justify-center gap-8 mt-5">
-          {[{l:"Bookings",v:bookings.length},{l:"Reports",v:bookings.filter(b=>b.report_url).length},{l:"Spent",v:fmt(totalSpend)}].map(s=>(
-            <div key={s.l} className="text-center">
-              <p className="text-xl font-black text-white">{s.v}</p>
-              <p className="text-xs" style={{color:"rgba(255,255,255,0.45)"}}>{s.l}</p>
+        <p style={{ fontSize: 22, fontWeight: 900, color: "white", marginBottom: 4 }}>{user.name || "Patient"}</p>
+        <p style={{ fontSize: 14, color: "rgba(255,255,255,.5)" }}>{user.phone}</p>
+        <div style={{ display: "flex", justifyContent: "center", gap: 32, marginTop: 20 }}>
+          {[{ l: "Bookings", v: bookings.length }, { l: "Reports", v: bookings.filter(b => b.report_url).length }, { l: "Spent", v: "₹" + (totalSpend / 1000).toFixed(0) + "K" }].map(s => (
+            <div key={s.l} style={{ textAlign: "center" }}>
+              <p style={{ fontSize: 22, fontWeight: 900, color: "white" }}>{s.v}</p>
+              <p style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 2 }}>{s.l}</p>
             </div>
           ))}
         </div>
       </div>
-      <div className="px-4 py-5 pb-24 space-y-4">
-        <div className="rounded-2xl p-4" style={{background:"#FFFFFF",border:"1px solid #E5E7EB"}}>
-          <p className="text-xs font-bold uppercase tracking-wider mb-4" style={{color:"#9CA3AF"}}>Personal Info</p>
-          <div className="space-y-3">
-            {[{l:"Full Name",v:name,s:setName,p:"Your name"},{l:"Email",v:email,s:setEmail,p:"email@example.com"},{l:"City",v:city,s:setCity,p:"Your city"}].map(f=>(
+
+      <div style={{ padding: "16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ background: "white", borderRadius: 20, border: "1px solid #E2E8F0", padding: 18 }}>
+          <p style={{ fontSize: 12, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 14 }}>Personal Info</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {[{ l: "Full Name", v: name, s: setName, p: "Your name" }, { l: "Email", v: email, s: setEmail, p: "email@example.com" }, { l: "City", v: city, s: setCity, p: "Hyderabad" }].map(f => (
               <div key={f.l}>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-1.5" style={{color:"#9CA3AF"}}>{f.l}</p>
-                <input value={f.v} onChange={e=>f.s(e.target.value)} placeholder={f.p}
-                  className="w-full rounded-xl px-3.5 py-3 text-sm outline-none transition-all"
-                  style={{border:"1.5px solid #E5E7EB",color:"#111827"}}
-                  onFocus={e=>{e.target.style.borderColor="#22C55E";}} onBlur={e=>{e.target.style.borderColor="#E5E7EB";}} />
+                <p style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", marginBottom: 6 }}>{f.l}</p>
+                <input style={inp} value={f.v} onChange={e => f.s(e.target.value)} placeholder={f.p}
+                  onFocus={e => { e.target.style.borderColor = G; e.target.style.boxShadow = `0 0 0 3px rgba(34,197,94,.1)`; }}
+                  onBlur={e => { e.target.style.borderColor = "#E2E8F0"; e.target.style.boxShadow = "none"; }} />
               </div>
             ))}
           </div>
           <button onClick={save} disabled={saving}
-            className="w-full mt-4 py-3.5 rounded-xl font-bold text-sm text-white cursor-pointer transition-all"
-            style={{background:saved?"#16A34A":"#22C55E"}}>
-            {saving?"Saving…":saved?"✓ Saved!":"Save Profile"}
+            style={{ width: "100%", marginTop: 16, padding: 14, borderRadius: 12, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit", border: "none", background: saved ? GD : G, color: "white", transition: "all .2s", boxShadow: "0 4px 14px rgba(34,197,94,.25)" }}>
+            {saving ? "Saving…" : saved ? "✓ Saved!" : "Save Profile"}
           </button>
         </div>
-        <button onClick={()=>{if(confirm("Sign out?"))onLogout();}}
-          className="w-full py-3.5 rounded-xl font-bold text-sm cursor-pointer"
-          style={{background:"#FEF2F2",color:"#DC2626",border:"1px solid #FECACA"}}>
+
+        <div style={{ background: "white", borderRadius: 20, border: "1px solid #E2E8F0", padding: 18 }}>
+          <p style={{ fontSize: 12, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 12 }}>Support</p>
+          {[{ l: "📞 Call Support", v: "+91-80-1234-5678" }, { l: "📧 Email", v: "support@checkupify.com" }, { l: "💬 WhatsApp", v: "+91-9876543210" }].map(r => (
+            <div key={r.l} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: "1px solid #F8FAFC" }}>
+              <span style={{ fontSize: 13, color: N, fontWeight: 600 }}>{r.l}</span>
+              <span style={{ fontSize: 13, color: "#7A90B3" }}>{r.v}</span>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={() => { if (confirm("Sign out of Checkupify?")) onLogout(); }}
+          style={{ width: "100%", padding: 14, borderRadius: 16, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit", border: "1.5px solid #FECACA", background: "#FEF2F2", color: "#DC2626" }}>
           Sign Out
         </button>
       </div>
-      <BottomNav current="profile" onNav={s=>s==="home"?onBack():null} />
-    </div>
-  );
-}
-
-// ─── BOTTOM NAV ────────────────────────────────────────────────────────────────
-const NAV_ITEMS = [
-  {s:"home" as Screen,i:"⊞",l:"Home"},
-  {s:"packages" as Screen,i:"🧪",l:"Book"},
-  {s:"bookings" as Screen,i:"📅",l:"Bookings"},
-  {s:"reports" as Screen,i:"📄",l:"Reports"},
-  {s:"profile" as Screen,i:"👤",l:"Profile"},
-];
-function BottomNav({ current, onNav }: { current:string; onNav:(s:Screen)=>void }) {
-  return (
-    <div className="fixed bottom-0 left-0 right-0 flex" style={{background:"#FFFFFF",borderTop:"1px solid #E5E7EB",paddingBottom:"env(safe-area-inset-bottom,8px)",paddingTop:"8px",zIndex:50}}>
-      {NAV_ITEMS.map(n=>{
-        const active = current===n.s;
-        return (
-          <button key={n.s} onClick={()=>onNav(n.s)} className="flex-1 flex flex-col items-center gap-0.5 py-1 cursor-pointer">
-            <span className="text-xl">{n.i}</span>
-            <span className="text-[10px] font-semibold" style={{color:active?"#22C55E":"#9CA3AF"}}>{n.l}</span>
-            {active && <div className="w-1 h-1 rounded-full" style={{background:"#22C55E"}} />}
-          </button>
-        );
-      })}
+      <NavBar active="profile" onNav={onNav} />
     </div>
   );
 }
