@@ -3,182 +3,125 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-const QUICK = [
-  { email: "ops@checkupify.com", role: "CRM Ops", color: "#22C55E" },
-  { email: "lab@checkupify.com", role: "Provider", color: "#3B82F6" },
-  { email: "admin@checkupify.com", role: "Admin", color: "#8B5CF6" },
+const ACCOUNTS = [
+  { email: "ops@checkupify.com",   label: "CRM Ops",   color: "#00CC8E" },
+  { email: "admin@checkupify.com", label: "Admin",     color: "#3B82F6" },
+  { email: "lab@checkupify.com",   label: "Provider",  color: "#7C3AED" },
 ];
 
-export default function LoginPage() {
+export default function Login() {
   const router = useRouter();
   const [email, setEmail] = useState("ops@checkupify.com");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
-      if (authError) {
-        setError(authError.message);
-        setLoading(false);
-        return;
-      }
-      if (data.user) {
-        router.push("/dashboard");
-        router.refresh();
-      }
-    } catch {
-      setError("Connection error. Please try again.");
-      setLoading(false);
-    }
+    setError(""); setLoading(true);
+    const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
+    if (err) { setError(err.message); setLoading(false); return; }
+    if (data.user) { router.push("/dashboard"); router.refresh(); }
   }
 
   return (
-    <div className="min-h-screen flex" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      {/* Left panel — Brand */}
-      <div
-        className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #0B1E3D 0%, #0D2A52 50%, #0B1E3D 100%)" }}
-      >
-        {/* Decorative circles */}
-        <div className="absolute top-0 right-0 w-96 h-96 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #22C55E, transparent)", transform: "translate(30%, -30%)" }} />
-        <div className="absolute bottom-0 left-0 w-80 h-80 rounded-full opacity-8" style={{ background: "radial-gradient(circle, #3B82F6, transparent)", transform: "translate(-30%, 30%)" }} />
-        <div className="absolute top-1/2 left-1/2 w-64 h-64 rounded-full opacity-5" style={{ background: "radial-gradient(circle, #22C55E, transparent)", transform: "translate(-50%, -50%)" }} />
+    <div className="login-wrap">
+      {/* Brand panel */}
+      <div className="login-brand">
+        <div className="login-brand-deco-1" />
+        <div className="login-brand-deco-2" />
 
         {/* Logo */}
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "#22C55E", boxShadow: "0 0 20px rgba(34,197,94,0.4)" }}>
-            <span className="text-white font-black text-lg">C</span>
+        <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 14, background: "var(--teal)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 20px rgba(0,204,142,.4)" }}>
+            <span style={{ color: "white", fontWeight: 900, fontSize: 20 }}>C</span>
           </div>
           <div>
-            <p className="text-white font-black text-lg leading-none">Checkupify</p>
-            <p className="text-white/40 text-xs mt-0.5">Operations Platform</p>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "white" }}>Checkupify</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)" }}>Operations Platform</div>
           </div>
         </div>
 
-        {/* Main content */}
-        <div className="relative z-10">
-          <h1 className="text-5xl font-black text-white leading-tight mb-6" style={{ letterSpacing: "-1.5px" }}>
-            Healthcare<br />
-            Operations<br />
-            <span style={{ color: "#22C55E" }}>Reimagined.</span>
+        {/* Headline */}
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <h1 style={{ fontSize: 44, fontWeight: 900, color: "white", letterSpacing: -2, lineHeight: 1.1, marginBottom: 16 }}>
+            Healthcare<br />Operations<br /><span style={{ color: "var(--teal)" }}>Simplified.</span>
           </h1>
-          <p className="text-white/50 text-lg leading-relaxed max-w-xs">
-            Manage bookings, labs, patients, and SLAs — all in one powerful platform.
+          <p style={{ fontSize: 16, color: "rgba(255,255,255,.5)", lineHeight: 1.6, maxWidth: 320 }}>
+            Manage bookings, verify reports, track SLAs and grow your healthcare network.
           </p>
 
           {/* Stats */}
-          <div className="flex gap-8 mt-10">
-            {[["23+", "Bookings"], ["8", "Labs"], ["16+", "Leads"]].map(([n, l]) => (
+          <div style={{ display: "flex", gap: 32, marginTop: 36 }}>
+            {[["23+", "Bookings"], ["9", "Packages"], ["5", "Lab Partners"]].map(([n, l]) => (
               <div key={l}>
-                <p className="text-2xl font-black text-white">{n}</p>
-                <p className="text-white/40 text-xs mt-0.5">{l}</p>
+                <div style={{ fontSize: 26, fontWeight: 900, color: "white" }}>{n}</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 2 }}>{l}</div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Footer */}
-        <p className="text-white/20 text-xs relative z-10">© 2026 Checkupify · Enterprise Healthcare Platform</p>
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,.2)", position: "relative", zIndex: 1 }}>
+          © 2026 Checkupify Health Technologies
+        </div>
       </div>
 
-      {/* Right panel — Form */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-[#F5F7FA]">
-        <div className="w-full max-w-[400px]">
+      {/* Form side */}
+      <div className="login-form-side">
+        <div className="login-form-box">
           {/* Mobile logo */}
-          <div className="flex items-center gap-3 mb-10 lg:hidden">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#22C55E" }}>
-              <span className="text-white font-black">C</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 36 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 12, background: "var(--teal)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ color: "white", fontWeight: 900, fontSize: 16 }}>C</span>
             </div>
-            <p className="text-[#0D1B35] font-black text-lg">Checkupify CRM</p>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--ink)" }}>Checkupify CRM</div>
           </div>
 
-          <h2 className="text-3xl font-black text-[#0D1B35] mb-2" style={{ letterSpacing: "-0.5px" }}>
-            Welcome back
-          </h2>
-          <p className="text-[#7A90B3] text-sm mb-8">Sign in to continue to your workspace</p>
+          <h2 style={{ fontSize: 28, fontWeight: 900, color: "var(--ink)", letterSpacing: -.5, marginBottom: 6 }}>Welcome back</h2>
+          <p style={{ fontSize: 14, color: "var(--hint)", marginBottom: 28 }}>Sign in to your workspace</p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-[11px] font-bold text-[#7A90B3] uppercase tracking-widest mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                className="w-full bg-white border border-[#E8ECF2] rounded-2xl px-4 py-3.5 text-sm text-[#0D1B35] outline-none transition-all shadow-sm"
-                style={{ boxShadow: "0 1px 3px rgba(11,30,61,0.06)" }}
-                onFocus={e => { e.target.style.borderColor = "#22C55E"; e.target.style.boxShadow = "0 0 0 3px rgba(34,197,94,0.15)"; }}
-                onBlur={e => { e.target.style.borderColor = "#E8ECF2"; e.target.style.boxShadow = "0 1px 3px rgba(11,30,61,0.06)"; }}
-              />
+          <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div className="form-group">
+              <label className="form-label">Email Address</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="form-input" placeholder="ops@checkupify.com" />
             </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-[#7A90B3] uppercase tracking-widest mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                placeholder="••••••••••"
-                className="w-full bg-white border border-[#E8ECF2] rounded-2xl px-4 py-3.5 text-sm text-[#0D1B35] outline-none transition-all shadow-sm"
-                style={{ boxShadow: "0 1px 3px rgba(11,30,61,0.06)" }}
-                onFocus={e => { e.target.style.borderColor = "#22C55E"; e.target.style.boxShadow = "0 0 0 3px rgba(34,197,94,0.15)"; }}
-                onBlur={e => { e.target.style.borderColor = "#E8ECF2"; e.target.style.boxShadow = "0 1px 3px rgba(11,30,61,0.06)"; }}
-              />
+            <div className="form-group">
+              <label className="form-label">Password</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="form-input" placeholder="••••••••••" />
             </div>
 
             {error && (
-              <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
-                <span className="text-red-500 text-lg leading-none mt-0.5">!</span>
-                <p className="text-sm text-red-700">{error}</p>
+              <div className="alert danger">
+                <span className="alert-icon">⚠</span>
+                <div>
+                  <div className="alert-title">{error}</div>
+                </div>
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 rounded-2xl font-bold text-white text-[15px] transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2.5 mt-2"
-              style={{
-                background: "linear-gradient(135deg, #22C55E, #16A34A)",
-                boxShadow: "0 4px 14px rgba(34,197,94,0.35)",
-              }}
-              onMouseOver={e => { (e.target as HTMLButtonElement).style.transform = "translateY(-1px)"; (e.target as HTMLButtonElement).style.boxShadow = "0 6px 20px rgba(34,197,94,0.45)"; }}
-              onMouseOut={e => { (e.target as HTMLButtonElement).style.transform = "translateY(0)"; (e.target as HTMLButtonElement).style.boxShadow = "0 4px 14px rgba(34,197,94,0.35)"; }}
-            >
-              {loading ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Signing in…
-                </>
-              ) : "Sign in to CRM →"}
+            <button type="submit" disabled={loading} className="btn primary lg full" style={{ marginTop: 4 }}>
+              {loading ? <><span className="spin-sm" />Signing in…</> : "Sign in to CRM →"}
             </button>
           </form>
 
-          {/* Quick Access */}
-          <div className="mt-8 pt-6 border-t border-[#E8ECF2]">
-            <p className="text-[10px] font-bold text-[#A8BACC] uppercase tracking-widest mb-3">Quick Access</p>
-            <div className="space-y-1">
-              {QUICK.map(q => (
-                <button key={q.email} onClick={() => setEmail(q.email)}
-                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl hover:bg-white cursor-pointer transition-all group border border-transparent hover:border-[#E8ECF2]">
-                  <span className="text-[12px] text-[#7A90B3] group-hover:text-[#3D5278]">{q.email}</span>
-                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ background: q.color + "15", color: q.color }}>{q.role}</span>
+          {/* Quick access */}
+          <div style={{ marginTop: 28, paddingTop: 24, borderTop: "1px solid var(--border)" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--hint)", marginBottom: 10 }}>Quick Access</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {ACCOUNTS.map(a => (
+                <button key={a.email} onClick={() => setEmail(a.email)} type="button"
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: "var(--r10)", border: "1px solid transparent", background: "none", cursor: "pointer", transition: "all .12s", fontFamily: "inherit" }}
+                  onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = "var(--s2)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
+                  onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = "none"; (e.currentTarget as HTMLElement).style.borderColor = "transparent"; }}>
+                  <span style={{ fontSize: 13, color: "var(--muted)" }}>{a.email}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: a.color + "15", color: a.color }}>{a.label}</span>
                 </button>
               ))}
             </div>
-            <div className="mt-3 px-3.5 py-2.5 rounded-xl bg-white border border-[#E8ECF2]">
-              <p className="text-[11px] text-center text-[#A8BACC]">
-                Password: <code className="font-mono text-[#3D5278] bg-slate-50 px-1.5 py-0.5 rounded">Checkupify@2026</code>
-              </p>
+            <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: "var(--r10)", background: "var(--s2)", border: "1px solid var(--border)", textAlign: "center" }}>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>Password: </span>
+              <code style={{ fontSize: 12, fontWeight: 700, color: "var(--teal)", background: "var(--teal-l)", padding: "2px 8px", borderRadius: 4 }}>Checkupify@2026</code>
             </div>
           </div>
         </div>

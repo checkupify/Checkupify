@@ -7,18 +7,21 @@ import { Sidebar } from "@/components/layout/Sidebar";
 export default function CrmLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [newBookings, setNewBookings] = useState(0);
-  const [newLeads, setNewLeads] = useState(0);
+  const [counts, setCounts] = useState({ new: 0, leads: 0, verify: 0 });
   const [checking, setChecking] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const fetchCounts = useCallback(async () => {
-    const [bRes, lRes] = await Promise.allSettled([
+    const [b, l, v] = await Promise.allSettled([
       supabase.from("bookings").select("id", { count: "exact", head: true }).eq("stage", "New"),
       supabase.from("leads").select("id", { count: "exact", head: true }).eq("status", "New"),
+      supabase.from("bookings").select("id", { count: "exact", head: true }).in("stage", ["Report Uploaded", "Partially Uploaded"]),
     ]);
-    if (bRes.status === "fulfilled" && bRes.value.count != null) setNewBookings(bRes.value.count);
-    if (lRes.status === "fulfilled" && lRes.value.count != null) setNewLeads(lRes.value.count);
+    setCounts({
+      new:    b.status === "fulfilled" ? (b.value.count ?? 0) : 0,
+      leads:  l.status === "fulfilled" ? (l.value.count ?? 0) : 0,
+      verify: v.status === "fulfilled" ? (v.value.count ?? 0) : 0,
+    });
   }, []);
 
   useEffect(() => {
@@ -34,30 +37,22 @@ export default function CrmLayout({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, [router, fetchCounts]);
 
-  if (checking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "linear-gradient(135deg, #0B2545 0%, #1B4B8A 100%)" }}>
-        <div className="text-center">
-          <div className="w-12 h-12 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: "#22C55E", boxShadow: "0 0 20px rgba(34,197,94,0.4)" }}>
-            <span className="text-white font-black text-xl">C</span>
-          </div>
-          <div className="w-5 h-5 border-2 border-white/20 border-t-[#22C55E] rounded-full animate-spin mx-auto" />
+  if (checking) return (
+    <div className="flex-center" style={{ minHeight: "100vh", background: "var(--navy-grad)" }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ width: 48, height: 48, borderRadius: 16, background: "var(--teal)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", boxShadow: "0 0 20px rgba(0,204,142,.4)" }}>
+          <span style={{ color: "white", fontWeight: 900, fontSize: 22 }}>C</span>
         </div>
+        <div className="spin" style={{ width: 22, height: 22, border: "2.5px solid rgba(255,255,255,.15)", borderTopColor: "var(--teal)", borderRadius: "50%", margin: "0 auto" }} />
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    <div className="flex h-screen bg-[#F0F4F8] overflow-hidden">
-      <Sidebar
-        userEmail={email}
-        newBookings={newBookings}
-        newLeads={newLeads}
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {/* Pass menu trigger to children via context workaround — children get onMenuClick via TopBar */}
+    <div className="app-shell">
+      <Sidebar userEmail={email} newBookings={counts.new} newLeads={counts.leads} pendingVerify={counts.verify} open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <div className="main-area">
+        {/* Inject onMenuClick into children via context — passed through cloneElement workaround */}
         {children}
       </div>
     </div>

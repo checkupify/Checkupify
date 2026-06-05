@@ -1,19 +1,17 @@
-import { cn } from "@/lib/utils";
-
-export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("skeleton", className)} />;
+export function Skeleton({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return <div className={`sk ${className ?? ""}`} style={style} />;
 }
 
 export function TableSkeleton({ rows = 6 }: { rows?: number }) {
   return (
-    <div className="space-y-px">
+    <div style={{ padding: "4px 0" }}>
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 px-5 py-3.5">
-          <Skeleton className="h-3.5 w-32" />
-          <Skeleton className="h-3.5 w-24" />
-          <Skeleton className="h-3.5 flex-1" />
-          <Skeleton className="h-3.5 w-20" />
-          <Skeleton className="h-5 w-16 rounded-full" />
+        <div key={i} style={{ display: "flex", gap: 12, padding: "14px 16px", alignItems: "center" }}>
+          <Skeleton style={{ height: 12, width: 80 }} />
+          <Skeleton style={{ height: 12, width: 120 }} />
+          <Skeleton style={{ height: 12, flex: 1 }} />
+          <Skeleton style={{ height: 12, width: 70 }} />
+          <Skeleton style={{ height: 20, width: 60, borderRadius: 99 }} />
         </div>
       ))}
     </div>
@@ -22,10 +20,10 @@ export function TableSkeleton({ rows = 6 }: { rows?: number }) {
 
 export function StatSkeleton() {
   return (
-    <div className="bg-white rounded-2xl border border-[#E8ECF2] p-5">
-      <Skeleton className="h-3 w-20 mb-4" />
-      <Skeleton className="h-8 w-16 mb-2" />
-      <Skeleton className="h-3 w-28" />
+    <div className="kpi">
+      <Skeleton style={{ height: 10, width: 80, marginBottom: 12 }} />
+      <Skeleton style={{ height: 32, width: 70, marginBottom: 8 }} />
+      <Skeleton style={{ height: 10, width: 110 }} />
     </div>
   );
 }
