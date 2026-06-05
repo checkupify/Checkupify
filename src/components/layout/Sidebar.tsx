@@ -13,6 +13,7 @@ const NAV = [
   { href: "/leads",       label: "Leads",       emoji: "📈" },
   { href: "/enterprises", label: "Enterprises", emoji: "🏢" },
   { href: "/finance",     label: "Finance",     emoji: "💰" },
+  { href: "/verify",      label: "Verify Reports",emoji: "☑"  },
   { href: "/staff",       label: "Staff",       emoji: "👤" },
   { href: "/settings",    label: "Settings",    emoji: "⚙️" },
 ];
