@@ -34,3 +34,15 @@ export interface UserProfile {
   department: string|null; designation: string|null; employee_id: string|null;
   is_active: boolean; created_at: string;
 }
+
+// Extended booking stages
+export type BookingStage = 
+  | "New"               // Just booked by patient
+  | "Confirmed"         // Lab confirmed the slot
+  | "In Progress"       // Patient arrived / sample collected
+  | "Report Uploaded"   // Lab uploaded all reports
+  | "Partially Uploaded"// Lab uploaded some, others skipped/not done
+  | "Under Verification"// VR team reviewing
+  | "Reports Received"  // All tests verified by VR team
+  | "Rejected"          // Booking rejected
+  | "No Show";          // Patient didn't arrive
