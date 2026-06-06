@@ -20,7 +20,7 @@ interface TestResult {
   vr_status: "pending" | "received" | "issue";
 }
 
-type Page = "dashboard" | "queue" | "reports" | "appointments" | "tat" | "quality" | "invoices" | "recon" | "contracts" | "settings";
+type Page = "dashboard" | "queue" | "reports" | "appointments" | "tat" | "quality" | "invoices" | "recon" | "contracts" | "poc" | "settings";
 
 // ─── Helpers ──────────────────────────────────────────
 const fmt = (n: number) => "₹" + Math.round(n).toLocaleString("en-IN");
@@ -277,6 +277,157 @@ function RejectModal({ booking, onClose, onReject, saving }: {
   );
 }
 
+// ─── Logo Upload Tab ──────────────────────────────────
+function LogoUploadTab({ onToast }: { onToast: (msg: string, type?: string) => void }) {
+  const [dragging, setDragging] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function handleFile(file: File) {
+    if (!file.type.startsWith("image/")) { onToast("Only image files allowed", "e"); return; }
+    if (file.size > 2 * 1024 * 1024) { onToast("File must be under 2 MB", "e"); return; }
+    const reader = new FileReader();
+    reader.onload = e => setPreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  return (
+    <div className="card">
+      <div className="card-head"><span className="card-title">Lab Logo</span></div>
+      <div style={{ padding: 20 }}>
+        <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
+          Upload your lab logo to appear on patient reports and the portal. Recommended: 400×400 px PNG, under 2 MB.
+        </div>
+        <div
+          onDragOver={e => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
+          onClick={() => fileRef.current?.click()}
+          style={{
+            border: `2px dashed ${dragging ? "var(--teal)" : "var(--border)"}`,
+            borderRadius: "var(--r12)", padding: "36px 20px", textAlign: "center",
+            background: dragging ? "var(--teal-l)" : "var(--s2)", cursor: "pointer",
+            transition: "all .15s", marginBottom: 16,
+          }}
+        >
+          {preview ? (
+            <img src={preview} alt="Logo preview" style={{ maxHeight: 100, maxWidth: 240, borderRadius: 8, objectFit: "contain" }} />
+          ) : (
+            <>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>🖼</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--slate)" }}>Drag & drop your logo here</div>
+              <div style={{ fontSize: 12, color: "var(--hint)", marginTop: 4 }}>or click to browse · PNG, JPG, SVG · max 2 MB</div>
+            </>
+          )}
+        </div>
+        <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+        {preview && (
+          <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+            <div style={{ flex: 1, padding: 14, border: "1px solid var(--border)", borderRadius: "var(--r10)", display: "flex", alignItems: "center", gap: 12 }}>
+              <img src={preview} alt="" style={{ height: 40, width: 40, objectFit: "contain", borderRadius: 6, border: "1px solid var(--border)" }} />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>Preview on reports</div>
+                <div style={{ fontSize: 11, color: "var(--hint)" }}>Will appear top-left of patient PDF reports</div>
+              </div>
+            </div>
+            <button className="btn" onClick={() => setPreview(null)}>Remove</button>
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 10 }}>
+          <button className="btn primary" onClick={() => { if (preview) { onToast("Logo saved successfully!", "s"); } else { fileRef.current?.click(); } }}>
+            {preview ? "Save Logo" : "Choose File"}
+          </button>
+          {preview && <button className="btn" onClick={() => setPreview(null)}>Cancel</button>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Working Hours Tab ────────────────────────────────
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const SLOTS = ["06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00"];
+
+function WorkingHoursTab({ onToast }: { onToast: (msg: string, type?: string) => void }) {
+  const [hours, setHours] = useState<Record<string, { open: boolean; from: string; to: string }>>(() =>
+    Object.fromEntries(DAYS.map(d => [d, { open: d !== "Sunday", from: "08:00", to: "20:00" }]))
+  );
+
+  function toggle(day: string) {
+    setHours(p => ({ ...p, [day]: { ...p[day], open: !p[day].open } }));
+  }
+  function setFrom(day: string, v: string) {
+    setHours(p => ({ ...p, [day]: { ...p[day], from: v } }));
+  }
+  function setTo(day: string, v: string) {
+    setHours(p => ({ ...p, [day]: { ...p[day], to: v } }));
+  }
+
+  return (
+    <div className="card">
+      <div className="card-head">
+        <span className="card-title">Operating Hours</span>
+        <span style={{ fontSize: 12, color: "var(--hint)" }}>Slot availability is generated from these hours</span>
+      </div>
+      <div style={{ padding: 20 }}>
+        <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 18 }}>
+          Set the days and hours your lab accepts walk-in and home collection appointments.
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {DAYS.map(day => {
+            const h = hours[day];
+            return (
+              <div key={day} style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "12px 14px", borderRadius: "var(--r10)",
+                border: `1.5px solid ${h.open ? "var(--teal)" : "var(--border)"}`,
+                background: h.open ? "var(--teal-l)" : "var(--s2)",
+                transition: "all .15s",
+              }}>
+                <button
+                  onClick={() => toggle(day)}
+                  className={`tgl${h.open ? " on" : ""}`}
+                  style={{ flexShrink: 0 }}
+                />
+                <div style={{ width: 90, fontSize: 13, fontWeight: h.open ? 700 : 500, color: h.open ? "var(--teal-d)" : "var(--muted)", flexShrink: 0 }}>
+                  {day.slice(0, 3)}
+                  <span style={{ display: "none" }}>{day.slice(3)}</span>
+                  <span style={{ fontSize: 11, fontWeight: 400, marginLeft: 2, color: h.open ? "var(--teal)" : "var(--hint)" }}>{day === "Saturday" || day === "Sunday" ? "Weekend" : "Weekday"}</span>
+                </div>
+                {h.open ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+                    <select value={h.from} onChange={e => setFrom(day, e.target.value)}
+                      style={{ padding: "6px 8px", border: "1px solid var(--border)", borderRadius: "var(--r8)", fontSize: 13, background: "#fff", fontFamily: "inherit", cursor: "pointer" }}>
+                      {SLOTS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <span style={{ color: "var(--hint)", fontSize: 12 }}>to</span>
+                    <select value={h.to} onChange={e => setTo(day, e.target.value)}
+                      style={{ padding: "6px 8px", border: "1px solid var(--border)", borderRadius: "var(--r8)", fontSize: 13, background: "#fff", fontFamily: "inherit", cursor: "pointer" }}>
+                      {SLOTS.filter(s => s > h.from).map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <span style={{ fontSize: 12, color: "var(--muted)", marginLeft: 4 }}>
+                      {Math.round((parseInt(h.to) - parseInt(h.from)))} hrs
+                    </span>
+                  </div>
+                ) : (
+                  <div style={{ flex: 1, fontSize: 12, color: "var(--hint)" }}>Closed — no appointments accepted</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ marginTop: 18, display: "flex", gap: 10 }}>
+          <button className="btn primary" onClick={() => onToast("Operating hours saved!", "s")}>Save Hours</button>
+          <button className="btn" onClick={() => {
+            setHours(Object.fromEntries(DAYS.map(d => [d, { open: d !== "Sunday", from: "08:00", to: "20:00" }])));
+            onToast("Reset to defaults", "i");
+          }}>Reset to Default</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN APP ─────────────────────────────────────────
 export default function PD() {
   const router = useRouter();
@@ -450,7 +601,8 @@ export default function PD() {
   const PAGE_LABELS: Record<Page, string> = {
     dashboard: "Dashboard", queue: "Confirmation Pending", reports: "Pending Reports",
     appointments: "All Appointments", tat: "TAT Analytics", quality: "Quality Score",
-    invoices: "Invoices & Payouts", recon: "Reconciliation", contracts: "Contract & Packages", settings: "Settings",
+    invoices: "Invoices & Payouts", recon: "Reconciliation", contracts: "Contract & Packages",
+    poc: "POC & SPOC Directory", settings: "Settings",
   };
 
   return (
@@ -529,6 +681,7 @@ export default function PD() {
             <div className="sb-sect">Account</div>
             {[
               { p: "contracts" as Page, label: "Contract & Packages", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg> },
+              { p: "poc" as Page, label: "POC & SPOC", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
               { p: "settings" as Page, label: "Settings", icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg> },
             ].map(item => (
               <button key={item.p} onClick={() => setPage(item.p)} className={`sb-item${page === item.p ? " active" : ""}`}>
@@ -1129,6 +1282,133 @@ export default function PD() {
                     </table>
                   </div>
                 </div>
+
+                {/* Packages table */}
+                <div className="card">
+                  <div className="card-head">
+                    <span className="card-title">Contracted Packages</span>
+                    <div className="card-acts">
+                      <span style={{ fontSize: 12, color: "var(--hint)" }}>IDs are masked for privacy</span>
+                      <button className="btn sm" onClick={() => addToast("Packages exported", "s")}>Export</button>
+                    </div>
+                  </div>
+                  <div className="tw">
+                    <table>
+                      <thead><tr><th>Package ID</th><th>Package Name</th><th>Tests Included</th><th>MRP</th><th>Your Price</th><th>Margin</th><th>Status</th></tr></thead>
+                      <tbody>
+                        {[
+                          { id: "HFL-FBC-01", name: "Full Body Checkup Basic", tests: 38, mrp: 3999, price: 2799, status: "Active" },
+                          { id: "HFL-FBC-02", name: "Full Body Checkup Advanced", tests: 72, mrp: 6999, price: 4999, status: "Active" },
+                          { id: "HFL-CRD-01", name: "Cardiac Risk Panel", tests: 14, mrp: 2499, price: 1699, status: "Active" },
+                          { id: "HFL-DIA-01", name: "Diabetes Management Panel", tests: 10, mrp: 1499, price: 999, status: "Active" },
+                          { id: "HFL-THY-01", name: "Thyroid Complete", tests: 5, mrp: 999, price: 699, status: "Active" },
+                          { id: "HFL-WMN-01", name: "Women's Wellness", tests: 55, mrp: 5499, price: 3799, status: "Active" },
+                          { id: "HFL-SEN-01", name: "Senior Citizen Panel", tests: 60, mrp: 4999, price: 3499, status: "Active" },
+                          { id: "HFL-LIV-01", name: "Liver Function Bundle", tests: 11, mrp: 1299, price: 899, status: "Inactive" },
+                        ].map(pkg => {
+                          const margin = Math.round(((pkg.mrp - pkg.price) / pkg.mrp) * 100);
+                          return (
+                            <tr key={pkg.id}>
+                              <td><span style={{ fontFamily: "monospace", fontSize: 12, color: "var(--teal)", fontWeight: 700, background: "var(--teal-l)", padding: "2px 7px", borderRadius: 5 }}>{pkg.id}</span></td>
+                              <td style={{ fontWeight: 600, fontSize: 13 }}>{pkg.name}</td>
+                              <td style={{ textAlign: "center" }}><span className="badge bgr">{pkg.tests} tests</span></td>
+                              <td style={{ color: "var(--hint)", textDecoration: "line-through", fontSize: 12 }}>{fmt(pkg.mrp)}</td>
+                              <td style={{ fontWeight: 700, color: "var(--teal)" }}>{fmt(pkg.price)}</td>
+                              <td><span className={`badge ${margin >= 30 ? "bg" : "ba"}`}>{margin}% off</span></td>
+                              <td><span className={`badge ${pkg.status === "Active" ? "bg" : "bgr"}`}>{pkg.status}</span></td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ═══ POC & SPOC ═══ */}
+            {page === "poc" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16, animation: "fadein .15s" }}>
+                <div className="alert alert-b">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span>These contacts are your dedicated points of contact at Checkupify. For operational issues, reach your SPOC first.</span>
+                </div>
+                <div className="g2">
+                  {/* POC Card */}
+                  <div className="card">
+                    <div className="card-head"><span className="card-title">Point of Contact (POC)</span><span className="badge bb">Strategic</span></div>
+                    <div style={{ padding: 20 }}>
+                      {[
+                        { name: "Arjun Mehta", role: "Account Manager", phone: "+91-98001 11001", email: "arjun.mehta@checkupify.com", region: "South India", avatar: "AM" },
+                        { name: "Priya Nair", role: "Partner Success Lead", phone: "+91-98001 11002", email: "priya.nair@checkupify.com", region: "Hyderabad City", avatar: "PN" },
+                      ].map(p => (
+                        <div key={p.name} style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "14px 0", borderBottom: "1px solid var(--bord2)" }}>
+                          <div style={{ width: 44, height: 44, borderRadius: "50%", background: "var(--teal)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff", flexShrink: 0 }}>{p.avatar}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
+                            <div style={{ fontSize: 12, color: "var(--teal)", fontWeight: 600, marginBottom: 4 }}>{p.role}</div>
+                            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Region: {p.region}</div>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                              <button className="abt" onClick={() => addToast(`Calling ${p.name}: ${p.phone}`, "i")}>📞 {p.phone}</button>
+                              <button className="abt" onClick={() => addToast(`Email: ${p.email}`, "i")}>✉ Email</button>
+                              <button className="abt" onClick={() => addToast("WhatsApp opened", "s")}>💬 WhatsApp</button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {/* SPOC Card */}
+                  <div className="card">
+                    <div className="card-head"><span className="card-title">Single Point of Contact (SPOC)</span><span className="badge bg">Operational</span></div>
+                    <div style={{ padding: 20 }}>
+                      {[
+                        { name: "Meera Subramaniam", role: "Relationship Manager", phone: "+91-98001 23456", email: "meera.s@checkupify.com", shift: "Mon–Sat, 8 AM–8 PM", avatar: "MS" },
+                        { name: "Kiran Reddy", role: "Tech Support Lead", phone: "+91-98001 23457", email: "kiran.r@checkupify.com", shift: "24×7 On-call", avatar: "KR" },
+                      ].map(p => (
+                        <div key={p.name} style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "14px 0", borderBottom: "1px solid var(--bord2)" }}>
+                          <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#6366F1", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "#fff", flexShrink: 0 }}>{p.avatar}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</div>
+                            <div style={{ fontSize: 12, color: "#6366F1", fontWeight: 600, marginBottom: 4 }}>{p.role}</div>
+                            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Availability: {p.shift}</div>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                              <button className="abt" onClick={() => addToast(`Calling ${p.name}: ${p.phone}`, "i")}>📞 {p.phone}</button>
+                              <button className="abt" onClick={() => addToast(`Email: ${p.email}`, "i")}>✉ Email</button>
+                              <button className="abt" onClick={() => addToast("WhatsApp opened", "s")}>💬 WhatsApp</button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                {/* Escalation matrix */}
+                <div className="card">
+                  <div className="card-head"><span className="card-title">Escalation Matrix</span></div>
+                  <div className="tw">
+                    <table>
+                      <thead><tr><th>Level</th><th>Contact</th><th>Role</th><th>Escalate When</th><th>SLA</th><th>Action</th></tr></thead>
+                      <tbody>
+                        {[
+                          { level: "L1", name: "Meera Subramaniam", role: "Relationship Manager", when: "Routine ops, booking issues, report queries", sla: "2 hours" },
+                          { level: "L2", name: "Arjun Mehta", role: "Account Manager", when: "Unresolved L1, financial disputes, SLA conflicts", sla: "4 hours" },
+                          { level: "L3", name: "Priya Nair", role: "Partner Success Lead", when: "Contract issues, critical escalations", sla: "24 hours" },
+                          { level: "L4", name: "Kiran Reddy", role: "Tech Support Lead", when: "Portal downtime, data issues, integration errors", sla: "1 hour" },
+                        ].map(row => (
+                          <tr key={row.level}>
+                            <td><span className={`badge ${row.level === "L1" ? "bg" : row.level === "L2" ? "ba" : row.level === "L3" ? "br" : "bb"}`}>{row.level}</span></td>
+                            <td style={{ fontWeight: 600, fontSize: 13 }}>{row.name}</td>
+                            <td style={{ fontSize: 12, color: "var(--muted)" }}>{row.role}</td>
+                            <td style={{ fontSize: 12, maxWidth: 200 }}>{row.when}</td>
+                            <td><span className="badge bg">{row.sla}</span></td>
+                            <td><button className="abt" onClick={() => addToast(`Escalating to ${row.name}`, "i")}>Escalate</button></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1136,7 +1416,7 @@ export default function PD() {
             {page === "settings" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 16, animation: "fadein .15s" }}>
                 <div style={{ display: "flex", gap: 16 }}>
-                  <div style={{ width: 180, flexShrink: 0 }}>
+                  <div style={{ width: 190, flexShrink: 0 }}>
                     {[["general", "⚙️ General"], ["sla", "⏱ SLA Config"], ["notif", "🔔 Notifications"], ["logo", "🖼 Lab Logo"], ["hours", "🕐 Operating Hours"]].map(([k, l]) => (
                       <button key={k} onClick={() => setSetTab(k)} className={`profile-tab${setTab === k ? " on" : ""}`}>{l}</button>
                     ))}
@@ -1188,16 +1468,11 @@ export default function PD() {
                         </div>
                       </div>
                     )}
-                    {(setTab === "logo" || setTab === "hours") && (
-                      <div className="card">
-                        <div className="card-head"><span className="card-title">{setTab === "logo" ? "Lab Logo" : "Operating Hours"}</span></div>
-                        <div style={{ padding: 20, color: "var(--hint)", fontSize: 13, textAlign: "center" }}>
-                          {setTab === "logo" ? "Upload lab logo for reports and patient-facing pages." : "Configure your lab's operating hours and collection timeslots."}
-                          <div style={{ marginTop: 16 }}>
-                            <button className="btn primary" onClick={() => addToast("Opening…", "i")}>{setTab === "logo" ? "Upload Logo" : "Configure Hours"}</button>
-                          </div>
-                        </div>
-                      </div>
+                    {setTab === "logo" && (
+                      <LogoUploadTab onToast={addToast} />
+                    )}
+                    {setTab === "hours" && (
+                      <WorkingHoursTab onToast={addToast} />
                     )}
                   </div>
                 </div>
