@@ -374,7 +374,7 @@ export default function PD() {
       setUploadTests(existing as TestResult[]);
       return;
     }
-    const pkgId = (b as any).package?.id;
+    const pkgId = (b as any).package_id ?? (b as any).package?.id;
     if (pkgId) {
       const { data: pkgTests } = await supabase.from("package_tests").select("test_id,tests!inner(id,name,category)").eq("package_id", pkgId);
       if (pkgTests && pkgTests.length > 0) {
