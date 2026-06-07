@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Checkupify — Provider Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --teal:#00CC8E;--teal-d:#00A873;--teal-l:#E6FFF7;
+  --navy:#0B2545;--ink:#0F172A;--slate:#334155;--muted:#64748B;--hint:#94A3B8;
+  --border:#E2E8F0;--bord2:#F1F5F9;
+  --bg:#F8FAFC;--surface:#FFFFFF;--s2:#F8FAFC;
+  --red:#DC2626;--redbg:#FEF2F2;--redbord:#FECACA;
+  --amber:#D97706;--amberbg:#FFFBEB;--amberbord:#FDE68A;
+  --green:#059669;--greenbg:#ECFDF5;--greenbord:#A7F3D0;
+  --blue:#1D4ED8;--bluebg:#EFF6FF;--bluebord:#BFDBFE;
+  --purple:#7C3AED;--purplebg:#F5F3FF;
+  --r4:4px;--r6:6px;--r8:8px;--r10:10px;--r12:12px;--r16:16px;
+}
+html,body{height:100vh;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:14px;color:var(--ink);background:var(--bg);line-height:1.5}
+svg{flex-shrink:0}
+#app{display:flex;height:100vh;width:100vw}
+/* ── SIDEBAR ── */
+#sb{width:240px;min-width:240px;background:var(--navy);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.sb-top{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-logo{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+.sb-ic{width:32px;height:32px;background:var(--teal);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800;flex-shrink:0}
+.sb-brand-name{font-size:15px;font-weight:800;color:#fff}
+.sb-brand-sub{font-size:10px;color:rgba(255,255,255,.4)}
+.lab-box{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:var(--r8);padding:10px 12px;display:flex;align-items:center;gap:10px}
+.lab-logo{width:38px;height:38px;border-radius:var(--r6);background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;border:1px dashed rgba(255,255,255,.2);flex-shrink:0}
+.lab-name{font-size:13px;font-weight:700;color:#fff}
+.lab-city{font-size:11px;color:rgba(255,255,255,.5)}
+.lab-nabl{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:var(--teal);color:#fff;margin-top:3px}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 8px}
+.sb-nav::-webkit-scrollbar{width:3px}
+.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1)}
+.sb-sect{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.3);padding:10px 10px 4px}
+.sb-item{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:var(--r8);cursor:pointer;font-size:13px;font-weight:500;color:rgba(255,255,255,.6);margin-bottom:1px;border:1px solid transparent;transition:.1s}
+.sb-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.sb-item.active{background:rgba(0,204,142,.15);color:var(--teal);border-color:rgba(0,204,142,.2)}
+.sb-item svg{opacity:.6;width:15px;height:15px}
+.sb-item.active svg{opacity:1}
+.sb-badge{margin-left:auto;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#EF4444;color:#fff}
+.sb-badge.a{background:#F59E0B}
+.sb-divider{height:1px;background:rgba(255,255,255,.07);margin:4px 6px}
+.rm-box{padding:12px 14px;border-top:1px solid rgba(255,255,255,.07);font-size:12px}
+.rm-label{color:rgba(255,255,255,.4);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.rm-name{color:#fff;font-weight:600;margin-bottom:2px}
+.rm-contact{color:var(--teal);font-size:11px;cursor:pointer}
+/* ── MAIN ── */
+#main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+#topbar{display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);background:#fff;flex-shrink:0;min-height:56px}
+.breadcrumb{font-size:12px;color:var(--hint);white-space:nowrap}
+.breadcrumb span{color:var(--slate);font-weight:600}
+.tb-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--r8);border:1px solid var(--border);background:#fff;font-size:13px;font-weight:500;cursor:pointer;color:var(--slate);font-family:inherit;white-space:nowrap;transition:.1s}
+.btn:hover{background:var(--s2)}
+.btn.primary{background:var(--teal);color:#fff;border-color:var(--teal);font-weight:600}
+.btn.primary:hover{background:var(--teal-d)}
+.btn.sm{padding:5px 11px;font-size:12px}
+.btn.danger{background:var(--redbg);color:var(--red);border-color:var(--redbord)}
+.btn.amber-btn{background:var(--amberbg);color:var(--amber);border-color:var(--amberbord)}
+.icon-btn{width:36px;height:36px;border-radius:var(--r8);border:1px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
+.icon-btn:hover{background:var(--s2)}
+.notif-dot{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:#EF4444;border:2px solid #fff}
+/* ── CONTENT ── */
+#content{flex:1;overflow-y:auto;padding:18px 20px;background:var(--bg)}
+#content::-webkit-scrollbar{width:5px}
+#content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.page{display:none;flex-direction:column;gap:16px;animation:fadein .15s}
+.page.show{display:flex}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+/* ── METRICS ── */
+.metrics{display:grid;gap:12px}
+.m3{grid-template-columns:repeat(3,1fr)}
+.m4{grid-template-columns:repeat(4,1fr)}
+.m5{grid-template-columns:repeat(5,1fr)}
+.m6{grid-template-columns:repeat(6,1fr)}
+.mcard{background:#fff;border:1px solid var(--border);border-radius:var(--r10);padding:14px 16px;cursor:default;position:relative;overflow:hidden;transition:border-color .15s}
+.mcard:hover{border-color:var(--teal)}
+.mcard-top{position:absolute;top:0;left:0;right:0;height:3px}
+.mlabel{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px}
+.mval{font-size:26px;font-weight:800;line-height:1;margin-bottom:4px}
+.msub{font-size:11px;color:var(--hint)}
+/* SLA strip */
+.sla-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.sla-card{background:#fff;border:1px solid var(--border);border-radius:var(--r10);padding:14px 16px;position:relative;overflow:hidden}
+.sla-label{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.sla-target{font-size:11px;color:var(--hint);margin-bottom:8px}
+.sla-val{font-size:22px;font-weight:800;margin-bottom:6px}
+.sla-bar{height:5px;border-radius:3px;background:var(--bord2);overflow:hidden}
+.sla-fill{height:100%;border-radius:3px}
+/* ── CARD ── */
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--r12);overflow:hidden}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.card-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/* ── TABS ── */
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 16px;overflow-x:auto;flex-shrink:0}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:9px 13px;font-size:13px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:5px;transition:.1s}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--teal-d);border-bottom-color:var(--teal);font-weight:600}
+.tcnt{font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:var(--bord2);color:var(--muted)}
+.tab.on .tcnt{background:var(--greenbg);color:var(--teal-d)}
+/* ── TABLE ── */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--hint);padding:9px 14px;text-align:left;background:var(--s2);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--bord2);color:var(--slate);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#FAFBFC}
+/* ── BADGE ── */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:700;white-space:nowrap}
+.bg{background:var(--greenbg);color:#065F46}
+.br{background:var(--redbg);color:#991B1B}
+.ba{background:var(--amberbg);color:#92400E}
+.bb{background:var(--bluebg);color:#1E40AF}
+.bn{background:#EEF2FF;color:#3730A3}
+.bgr{background:var(--bord2);color:var(--muted)}
+.bp{background:var(--purplebg);color:var(--purple)}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.dot-g{background:#10B981}
+.dot-r{background:#EF4444}
+.dot-a{background:#F59E0B}
+/* ── PBAR ── */
+.pbar{height:5px;border-radius:3px;background:var(--bord2);overflow:hidden}
+.pfill{height:100%;border-radius:3px}
+.pf-g{background:#10B981}
+.pf-a{background:#F59E0B}
+.pf-r{background:#EF4444}
+.pf-t{background:var(--teal)}
+/* ── MODAL ── */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:flex-start;justify-content:center;padding:32px 16px;overflow-y:auto}
+.ov.open{display:flex}
+.modal{background:#fff;border-radius:var(--r12);width:100%;position:relative;box-shadow:0 25px 50px rgba(0,0,0,.15)}
+.modal-sm{max-width:480px}
+.modal-md{max-width:640px}
+.modal-lg{max-width:820px}
+.modal-xl{max-width:960px}
+.mhead{display:flex;align-items:flex-start;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
+.mtitle{font-size:16px;font-weight:800}
+.mclose{width:30px;height:30px;border-radius:var(--r6);border:1px solid var(--border);background:var(--s2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted)}
+.mclose:hover{background:var(--bord2)}
+.mbody{padding:20px 22px}
+.mfoot{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
+/* ── FORM ── */
+.fgrp{margin-bottom:13px}
+.fgrp label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.fgrp input,.fgrp select,.fgrp textarea{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r8);font-size:13px;color:var(--ink);background:#fff;font-family:inherit;outline:none;transition:.1s}
+.fgrp input:focus,.fgrp select:focus,.fgrp textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,204,142,.1)}
+.frow{display:grid;gap:12px}
+.f2{grid-template-columns:1fr 1fr}
+.f3{grid-template-columns:1fr 1fr 1fr}
+/* ── TOGGLE ── */
+.tgl{width:36px;height:20px;border-radius:10px;background:var(--border);border:none;cursor:pointer;position:relative;transition:.2s;flex-shrink:0;display:inline-block}
+.tgl.on{background:var(--teal)}
+.tgl::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tgl.on::after{left:19px}
+.tgl-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bord2)}
+.tgl-row:last-child{border-bottom:none}
+.tgl-info h4{font-size:13px;font-weight:600}
+.tgl-info p{font-size:12px;color:var(--hint);margin-top:2px}
+/* ── ALERT ── */
+.alert{border-radius:var(--r8);padding:11px 15px;display:flex;align-items:flex-start;gap:9px;font-size:13px}
+.alert-a{background:var(--amberbg);border:1px solid var(--amberbord);color:#92400E}
+.alert-r{background:var(--redbg);border:1px solid var(--redbord);color:#991B1B}
+.alert-g{background:var(--greenbg);border:1px solid var(--greenbord);color:#065F46}
+.alert-b{background:var(--bluebg);border:1px solid var(--bluebord);color:#1E40AF}
+/* ── ACT BTN ── */
+.abt{padding:4px 10px;border-radius:var(--r6);border:1px solid var(--border);background:#fff;font-size:12px;font-weight:500;cursor:pointer;color:var(--slate);font-family:inherit;transition:.1s;display:inline-flex;align-items:center;gap:4px}
+.abt:hover{background:var(--s2)}
+.abt.c{background:var(--greenbg);color:#065F46;border-color:var(--greenbord)}
+.abt.r{background:var(--redbg);color:#991B1B;border-color:var(--redbord)}
+.abt.u{background:var(--bluebg);color:#1E40AF;border-color:var(--bluebord)}
+.abt.a{background:var(--amberbg);color:#92400E;border-color:var(--amberbord)}
+/* ── TOAST ── */
+#toasts{position:fixed;bottom:22px;right:22px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:#fff;border:1px solid var(--border);border-radius:var(--r10);padding:12px 16px;box-shadow:0 8px 24px rgba(0,0,0,.12);display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500;min-width:280px;pointer-events:all;animation:toastin .25s ease}
+.toast.s{border-left:3px solid var(--teal)}
+.toast.e{border-left:3px solid var(--red)}
+.toast.i{border-left:3px solid #3B82F6}
+.toast.w{border-left:3px solid var(--amber)}
+@keyframes toastin{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+/* ── SLIDE PANEL ── */
+#upload-panel{position:fixed;top:0;right:-480px;width:480px;height:100vh;background:#fff;box-shadow:-8px 0 32px rgba(0,0,0,.15);z-index:900;transition:right .3s ease;display:flex;flex-direction:column;overflow:hidden}
+#upload-panel.open{right:0}
+.panel-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0}
+.panel-body{flex:1;overflow-y:auto;padding:18px 20px}
+.panel-body::-webkit-scrollbar{width:4px}
+.panel-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.panel-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
+/* ── GRID ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g2-1{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+.fcol{display:flex;flex-direction:column;gap:14px}
+/* ── CHART BARS ── */
+.chartbars{display:flex;align-items:flex-end;gap:5px}
+.cbar{flex:1;border-radius:4px 4px 0 0;min-height:3px;cursor:pointer;transition:opacity .1s}
+.cbar:hover{opacity:.75}
+.clabels{display:flex;gap:5px;margin-top:5px}
+.clbl{flex:1;font-size:10px;color:var(--hint);text-align:center}
+.iline{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bord2);font-size:13px}
+.iline:last-child{border-bottom:none}
+.iline .lbl{color:var(--muted)}
+.tpager{padding:10px 16px;border-top:1px solid var(--bord2);display:flex;align-items:center;justify-content:space-between}
+.tpager span{font-size:12px;color:var(--hint)}
+.pgbtns{display:flex;gap:4px}
+.pgbtn{padding:5px 10px;border-radius:var(--r6);border:1px solid var(--border);background:#fff;font-size:12px;cursor:pointer;color:var(--slate);font-family:inherit}
+.pgbtn.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+.req{color:#EF4444}
+/* profile tabs */
+.profile-tab{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:var(--r8);cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);margin-bottom:2px;transition:.1s}
+.profile-tab:hover{background:var(--s2);color:var(--ink)}
+.profile-tab.on{background:var(--greenbg);color:var(--teal-d);font-weight:600}
+</style>
+</head>
+<body>
+<div id="toasts"></div>
+
+<!-- ═══ SLIDE UPLOAD PANEL ═══ -->
+<div id="upload-panel">
+  <div class="panel-head">
+    <div>
+      <div style="font-size:15px;font-weight:800" id="up-title">Upload Report</div>
+      <div style="font-size:12px;color:var(--hint);margin-top:3px" id="up-sub">CK-APT-A7B9C2D4</div>
+    </div>
+    <button class="mclose" onclick="closeUploadPanel()">✕</button>
+  </div>
+  <div class="panel-body" id="up-body"></div>
+  <div class="panel-foot">
+    <button class="btn" onclick="closeUploadPanel()">Cancel</button>
+    <button class="btn primary" onclick="submitUpload()">Submit Report</button>
+  </div>
+</div>
+<div id="panel-ov" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:899" onclick="closeUploadPanel()"></div>
+
+<div id="login-gate" style="display:none;position:fixed;inset:0;z-index:2000;background:linear-gradient(160deg,#0B2545,#1B4B8A);align-items:center;justify-content:center;font-family:inherit">
+  <div style="background:#fff;border-radius:16px;padding:34px 32px;width:100%;max-width:380px;box-shadow:0 25px 60px rgba(0,0,0,.3)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px">
+      <div style="width:38px;height:38px;border-radius:11px;background:var(--teal);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px">CK</div>
+      <div><div style="font-size:16px;font-weight:800;color:var(--ink)">Checkupify</div><div style="font-size:11px;color:var(--hint)">Provider Portal v2.0</div></div>
+    </div>
+    <div style="font-size:22px;font-weight:800;color:var(--ink);margin-bottom:4px">Welcome back</div>
+    <div style="font-size:13px;color:var(--hint);margin-bottom:20px">Sign in to your lab partner account</div>
+    <div class="fgrp"><label>Email</label><input id="lg-email" type="email" value="lab@checkupify.com" placeholder="lab@checkupify.com"></div>
+    <div class="fgrp"><label>Password</label><input id="lg-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div id="lg-err" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:6px"></div>
+    <button id="lg-btn" class="btn primary" style="width:100%;justify-content:center;padding:11px" onclick="doLogin()">Sign in to Provider Portal →</button>
+    <div style="margin-top:18px;padding:11px;background:var(--s2);border:1px solid var(--border);border-radius:9px;text-align:center;font-size:12px;color:var(--hint)">Demo: lab@checkupify.com · <code style="color:var(--teal-d)">Checkupify@2026</code></div>
+  </div>
+</div>
+
+<div id="app">
+<!-- ════ SIDEBAR ════ -->
+<aside id="sb">
+  <div class="sb-top">
+    <div class="sb-logo">
+      <div class="sb-ic">CK</div>
+      <div><div class="sb-brand-name">Checkupify</div><div class="sb-brand-sub">Provider Portal v2.0</div></div>
+    </div>
+    <div class="lab-box">
+      <div class="lab-logo" onclick="nav('settings');setTimeout(()=>switchSetTab('logo'),100)" title="Upload Lab Logo">🏥</div>
+      <div>
+        <div class="lab-name">HealthFirst Labs</div>
+        <div class="lab-city">Jubilee Hills, Hyderabad</div>
+        <div class="lab-nabl">✓ NABL Certified</div>
+      </div>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-sect">Quick Actions</div>
+    <div class="sb-item active" onclick="nav('dashboard',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </div>
+    <div class="sb-item" onclick="nav('confirm-pending',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Confirmation Pending <span class="sb-badge" id="sb-confirm-badge">7</span>
+    </div>
+    <div class="sb-item" onclick="nav('pending-reports',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Pending Reports <span class="sb-badge a" id="sb-reports-badge">23</span>
+    </div>
+    <div class="sb-item" onclick="nav('appointments',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      All Appointments
+    </div>
+    <div class="sb-divider"></div>
+    <div class="sb-sect">Analytics</div>
+    <div class="sb-item" onclick="nav('tat',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      TAT Analytics
+    </div>
+    <div class="sb-item" onclick="nav('quality',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      Quality Score
+    </div>
+    <div class="sb-divider"></div>
+    <div class="sb-sect">Finance</div>
+    <div class="sb-item" onclick="nav('invoices',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      Invoices & Payouts
+    </div>
+    <div class="sb-item" onclick="nav('recon',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Reconciliation
+    </div>
+    <div class="sb-divider"></div>
+    <div class="sb-sect">Account</div>
+    <div class="sb-item" onclick="nav('contract',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+      Contract & Packages
+    </div>
+    <div class="sb-item" onclick="nav('poc',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      POC & SPOC
+    </div>
+    <div class="sb-item" onclick="nav('settings',this)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      Settings
+    </div>
+  </nav>
+  <div class="rm-box">
+    <div class="rm-label">Your Relationship Manager</div>
+    <div class="rm-name">Meera Subramaniam</div>
+    <div class="rm-contact" onclick="toast('i','Calling Meera: +91-98001 23456')">📞 +91-98001 23456</div>
+    <div class="rm-contact" onclick="toast('s','WhatsApp opened')" style="margin-top:3px">💬 Chat on WhatsApp</div>
+  </div>
+</aside>
+
+<!-- ════ MAIN ════ -->
+<div id="main">
+  <div id="topbar">
+    <div class="breadcrumb" id="bc">Home / <span>Dashboard</span></div>
+    <div class="tb-right">
+      <button class="btn sm" onclick="nav('confirm-pending')">Confirm Pending <span id="tb-confirm-badge" style="background:#EF4444;color:#fff;border-radius:9px;padding:1px 6px;font-size:10px;margin-left:3px">7</span></button>
+      <button class="btn sm primary" onclick="openUploadPanel(null,null,null)">Upload Report</button>
+      <div class="icon-btn" onclick="toast('i','2 new alerts')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div class="notif-dot"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;border:1px solid var(--border);border-radius:var(--r8);background:#fff;cursor:pointer">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff">HL</div>
+        <span style="font-size:13px;font-weight:600;color:var(--slate)" onclick="doLogout()" title="Sign out">HealthFirst Labs</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- ═══ DASHBOARD ═══ -->
+    <div class="page show" id="p-dashboard">
+      <div class="sla-strip">
+        <div class="sla-card">
+          <div class="mcard-top" style="background:#10B981"></div>
+          <div class="sla-label">Confirmation TAT</div>
+          <div class="sla-target">Target: &lt;2 hours</div>
+          <div class="sla-val" style="color:var(--green)">1h 38m <span style="font-size:13px">avg</span></div>
+          <div class="sla-bar"><div class="sla-fill" style="width:82%;background:#10B981"></div></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:5px">✓ Within SLA — 94% compliance</div>
+        </div>
+        <div class="sla-card">
+          <div class="mcard-top" style="background:#F59E0B"></div>
+          <div class="sla-label">First Report TAT</div>
+          <div class="sla-target">Target: &lt;6 hours</div>
+          <div class="sla-val" style="color:var(--amber)">5h 42m <span style="font-size:13px">avg</span></div>
+          <div class="sla-bar"><div class="sla-fill" style="width:95%;background:#F59E0B"></div></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:5px">⚠ Close to SLA — 81% compliance</div>
+        </div>
+        <div class="sla-card">
+          <div class="mcard-top" style="background:#10B981"></div>
+          <div class="sla-label">Full Report TAT</div>
+          <div class="sla-target">Target: &lt;36 hours</div>
+          <div class="sla-val" style="color:var(--green)">28h 12m <span style="font-size:13px">avg</span></div>
+          <div class="sla-bar"><div class="sla-fill" style="width:78%;background:#10B981"></div></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:5px">✓ Within SLA — 97% compliance</div>
+        </div>
+      </div>
+      <div class="metrics m6">
+        <div class="mcard" onclick="nav('appointments')"><div class="mcard-top" style="background:var(--teal)"></div><div class="mlabel">Today</div><div class="mval" id="m-today">43</div><div class="msub">Appointments</div></div>
+        <div class="mcard" onclick="nav('appointments')"><div class="mcard-top" style="background:#6366F1"></div><div class="mlabel">Tomorrow</div><div class="mval" id="m-tomorrow">38</div></div>
+        <div class="mcard" onclick="nav('appointments')"><div class="mcard-top" style="background:#0EA5E9"></div><div class="mlabel">Next 7 Days</div><div class="mval" id="m-next7">214</div></div>
+        <div class="mcard" onclick="nav('confirm-pending')"><div class="mcard-top" style="background:#EF4444"></div><div class="mlabel">Needs Action</div><div class="mval" id="m-needs" style="color:var(--red)">7</div><div class="msub">Confirm within SLA</div></div>
+        <div class="mcard" onclick="nav('pending-reports')"><div class="mcard-top" style="background:#F59E0B"></div><div class="mlabel">Reports Due</div><div class="mval" id="m-reports" style="color:var(--amber)">23</div><div class="msub">Upload pending</div></div>
+        <div class="mcard"><div class="mcard-top" style="background:#EF4444"></div><div class="mlabel">QC Failed</div><div class="mval" style="color:var(--red)">2</div><div class="msub">Needs re-upload</div></div>
+      </div>
+      <div class="g2-1">
+        <div class="fcol">
+          <div class="card">
+            <div class="card-head">
+              <span class="card-title">Reports to Upload (Pending)</span>
+              <button class="btn sm primary" onclick="openUploadPanel(null,null,null)">+ Upload Report</button>
+            </div>
+            <div class="tw"><table>
+              <thead><tr><th>Apt ID</th><th>Patient</th><th>Test</th><th>Date</th><th>Due In</th><th>Status</th><th>Action</th></tr></thead>
+              <tbody id="dash-reports"></tbody>
+            </table></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><span class="card-title">Month Earnings</span><span class="badge bg">April 2026</span></div>
+            <div style="padding:14px 16px">
+              <div class="iline"><span class="lbl">Gross Revenue</span><span style="font-weight:600">₹4,28,000</span></div>
+              <div class="iline"><span class="lbl">Platform Fee (11%)</span><span style="color:var(--red)">−₹47,080</span></div>
+              <div class="iline"><span class="lbl">SLA Deductions</span><span style="color:var(--amber)">−₹2,400</span></div>
+              <div class="iline"><span>Net Payout</span><span style="color:var(--green);font-weight:800">₹3,78,520</span></div>
+              <div style="margin-top:10px;font-size:12px;color:var(--hint)">Next payout: 25 Apr 2026</div>
+            </div>
+          </div>
+        </div>
+        <div class="fcol">
+          <div class="card">
+            <div class="card-head"><span class="card-title">SLA Performance</span><span style="font-size:11px;color:var(--hint)">MTD</span></div>
+            <div style="padding:14px 16px;display:flex;flex-direction:column;gap:11px">
+              <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">Confirmation (&lt;2 hr)</span><span style="color:var(--green);font-weight:600">94%</span></div><div class="pbar"><div class="pfill pf-g" style="width:94%"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">First Report (&lt;6 hr)</span><span style="color:var(--amber);font-weight:600">81%</span></div><div class="pbar"><div class="pfill pf-a" style="width:81%"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">Full Report (&lt;36 hr)</span><span style="color:var(--green);font-weight:600">97%</span></div><div class="pbar"><div class="pfill pf-g" style="width:97%"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">Rejection Rate (&lt;2%)</span><span style="color:var(--green);font-weight:600">1.4%</span></div><div class="pbar"><div class="pfill pf-g" style="width:28%"></div></div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><span class="card-title">7-Day Revenue Trend</span></div>
+            <div style="padding:14px 16px">
+              <div class="chartbars" id="dash-chart" style="height:80px"></div>
+              <div class="clabels" id="dash-labels"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CONFIRM PENDING ═══ -->
+    <div class="page" id="p-confirm-pending">
+      <div class="alert alert-r">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+        <span><strong>SLA Alert:</strong> Confirm appointments within 2 hours or a penalty of ₹400 per breach will be applied. <strong>7 appointments awaiting confirmation.</strong></span>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Awaiting Confirmation</span>
+          <div class="card-acts">
+            <span class="badge br" style="font-size:12px">7 pending</span>
+          </div>
+        </div>
+        <div class="tw"><table>
+          <thead><tr><th>Apt ID</th><th>Patient</th><th>Package / Tests</th><th>Slot</th><th>Type</th><th>Time Left</th><th>Actions</th></tr></thead>
+          <tbody id="confirm-table"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ═══ PENDING REPORTS ═══ -->
+    <div class="page" id="p-pending-reports">
+      <div class="alert alert-a">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+        <span><strong>23 reports pending upload.</strong> Upload reports before the 36-hour SLA deadline to avoid penalties.</span>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Pending Report Uploads</span>
+          <div class="card-acts">
+            <button class="btn sm primary" onclick="openUploadPanel(null,null,null)">+ Upload Report</button>
+          </div>
+        </div>
+        <div class="tabs" id="pr-tabs">
+          <div class="tab on" onclick="switchTab('pr-tabs',this);renderPendingTable('all')">All <span class="tcnt">23</span></div>
+          <div class="tab" onclick="switchTab('pr-tabs',this);renderPendingTable('overdue')">Overdue <span class="tcnt">4</span></div>
+          <div class="tab" onclick="switchTab('pr-tabs',this);renderPendingTable('today')">Due Today <span class="tcnt">8</span></div>
+          <div class="tab" onclick="switchTab('pr-tabs',this);renderPendingTable('upcoming')">Upcoming <span class="tcnt">11</span></div>
+        </div>
+        <div class="tw"><table>
+          <thead><tr><th>Apt ID</th><th>Patient</th><th>Package</th><th>Visit Date</th><th>Due By</th><th>Time Left</th><th>Tests</th><th>Report Status</th><th>Action</th></tr></thead>
+          <tbody id="pr-table"></tbody>
+        </table></div>
+        <div class="tpager"><span>Showing 1–10 of 23</span><div class="pgbtns"><button class="pgbtn">←</button><button class="pgbtn on">1</button><button class="pgbtn">2</button><button class="pgbtn">3</button><button class="pgbtn">→</button></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ ALL APPOINTMENTS ═══ -->
+    <div class="page" id="p-appointments">
+      <div class="metrics m4">
+        <div class="mcard"><div class="mlabel">Total Bookings</div><div class="mval">342</div><div class="msub">This month</div></div>
+        <div class="mcard"><div class="mlabel">Confirmed</div><div class="mval" style="color:var(--green)">298</div></div>
+        <div class="mcard"><div class="mlabel">Rejected</div><div class="mval" style="color:var(--red)">12</div></div>
+        <div class="mcard"><div class="mlabel">No Show</div><div class="mval" style="color:var(--amber)">8</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">All Appointments</span>
+          <div class="card-acts">
+            <input type="date" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--r8);font-size:12px;background:#fff;font-family:inherit">
+            <button class="btn sm" onclick="exportCSV()">Export</button>
+          </div>
+        </div>
+        <div class="tabs" id="all-apt-tabs">
+          <div class="tab on" onclick="switchTab('all-apt-tabs',this);renderAllApt('all')">All <span class="tcnt">342</span></div>
+          <div class="tab" onclick="switchTab('all-apt-tabs',this);renderAllApt('Confirmed')">Confirmed <span class="tcnt">298</span></div>
+          <div class="tab" onclick="switchTab('all-apt-tabs',this);renderAllApt('Rejected')">Rejected <span class="tcnt">12</span></div>
+          <div class="tab" onclick="switchTab('all-apt-tabs',this);renderAllApt('No Show')">No Show <span class="tcnt">8</span></div>
+          <div class="tab" onclick="switchTab('all-apt-tabs',this);renderAllApt('Partially Received')">Partially Received <span class="tcnt">23</span></div>
+          <div class="tab" onclick="switchTab('all-apt-tabs',this);renderAllApt('Received')">Received <span class="tcnt">186</span></div>
+          <div class="tab" onclick="switchTab('all-apt-tabs',this);renderAllApt('today')">Today <span class="tcnt">43</span></div>
+          <div class="tab" onclick="switchTab('all-apt-tabs',this);renderAllApt('tomorrow')">Tomorrow <span class="tcnt">38</span></div>
+        </div>
+        <div class="tw"><table>
+          <thead><tr><th>Apt ID</th><th>Patient</th><th>Package</th><th>Date & Time</th><th>Type</th><th>Stage</th><th>Actions</th></tr></thead>
+          <tbody id="all-apt-table"></tbody>
+        </table></div>
+        <div class="tpager"><span>Showing 1–25 of 342</span><div class="pgbtns"><button class="pgbtn">←</button><button class="pgbtn on">1</button><button class="pgbtn">2</button><button class="pgbtn">→</button></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ TAT ANALYTICS ═══ -->
+    <div class="page" id="p-tat">
+      <div class="alert alert-b" id="tat-penalty-note">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="tat-note-text"><strong>SLA Penalties are active.</strong> Deviations beyond SLA targets will incur financial charges. See breakdown below.</span>
+      </div>
+      <div class="metrics m4">
+        <div class="mcard"><div class="mcard-top" style="background:var(--teal)"></div><div class="mlabel">Avg Confirmation TAT</div><div class="mval">1h 38m</div><div class="msub" style="color:var(--green)">✓ Within SLA</div></div>
+        <div class="mcard"><div class="mcard-top" style="background:#F59E0B"></div><div class="mlabel">Avg First Report TAT</div><div class="mval" style="color:var(--amber)">5h 42m</div><div class="msub" style="color:var(--amber)">⚠ Near SLA</div></div>
+        <div class="mcard"><div class="mcard-top" style="background:#10B981"></div><div class="mlabel">Avg Full Report TAT</div><div class="mval">28h 12m</div><div class="msub" style="color:var(--green)">✓ Within SLA</div></div>
+        <div class="mcard"><div class="mcard-top" style="background:#EF4444"></div><div class="mlabel">SLA Breaches MTD</div><div class="mval" style="color:var(--red)">6</div><div class="msub" id="tat-breach-penalty">₹2,400 in penalties</div></div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">7-Day SLA Compliance</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="display:flex;align-items:center;gap:4px;font-size:12px"><span style="width:10px;height:10px;background:#10B981;border-radius:2px;display:inline-block"></span>Within SLA</span>
+              <span style="display:flex;align-items:center;gap:4px;font-size:12px"><span style="width:10px;height:10px;background:#EF4444;border-radius:2px;display:inline-block"></span>Breach</span>
+            </div>
+          </div>
+          <div style="padding:16px">
+            <div class="chartbars" id="tat-chart" style="height:100px"></div>
+            <div class="clabels" id="tat-labels"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">SLA Breach Details</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:12px;color:var(--muted)">Penalty mode:</span>
+              <span class="badge bg" id="tat-penalty-badge">Active</span>
+            </div>
+          </div>
+          <div style="padding:14px 16px">
+            <table style="width:100%;font-size:12px;border-collapse:collapse" id="tat-breach-table">
+              <thead><tr>
+                <th style="text-align:left;padding:6px 0;font-size:10px;color:var(--hint)">SLA Type</th>
+                <th style="text-align:center;padding:6px;font-size:10px;color:var(--hint)">Target</th>
+                <th style="text-align:center;padding:6px;font-size:10px;color:var(--hint)">Actual</th>
+                <th style="text-align:right;padding:6px;font-size:10px;color:var(--hint)" id="tat-col-head">Penalty</th>
+              </tr></thead>
+              <tbody id="tat-breach-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Tips to Avoid Penalties</span></div>
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--greenbg);border-radius:var(--r8)"><span style="font-size:16px">💡</span><div><div style="font-size:13px;font-weight:600">Confirm within 30 minutes</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Enable WhatsApp alerts to get notified instantly when a booking arrives.</div></div></div>
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--bluebg);border-radius:var(--r8)"><span style="font-size:16px">🚀</span><div><div style="font-size:13px;font-weight:600">Upload first report within 5 hours</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Even partial reports count as 'First Report' — upload as soon as one test is done.</div></div></div>
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--amberbg);border-radius:var(--r8)"><span style="font-size:16px">⚡</span><div><div style="font-size:13px;font-weight:600">Keep rejection rate under 2%</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Only reject if genuinely unable to serve. Frequent rejections impact your quality score.</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ QUALITY SCORE ═══ -->
+    <div class="page" id="p-quality">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r12);padding:20px 24px;display:flex;align-items:center;gap:18px;flex-shrink:0">
+          <div style="width:72px;height:72px;border-radius:50%;background:conic-gradient(var(--teal) 0% 82%,var(--bord2) 82% 100%);display:flex;align-items:center;justify-content:center">
+            <div style="width:54px;height:54px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center"><span style="font-size:18px;font-weight:800;color:var(--teal)">82</span></div>
+          </div>
+          <div><div style="font-size:16px;font-weight:800">Quality Score</div><div style="font-size:12px;color:var(--hint);margin-top:3px">April 2026 · HealthFirst Labs</div><div class="badge bg" style="margin-top:6px">Good</div></div>
+        </div>
+        <div style="flex:1">
+          <div class="alert alert-g"><span>Your confirmation TAT improved 12% vs last month. Keep uploading first reports early to improve your score further.</span></div>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="card-head"><span class="card-title">SLA Metrics</span></div>
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:13px" id="qs-sla-metrics"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Patient Experience</span></div>
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:13px">
+            <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">Response Time</span><span style="color:var(--green);font-weight:700">Excellent</span></div><div class="pbar"><div class="pfill pf-g" style="width:91%"></div></div><div style="font-size:11px;color:var(--hint);margin-top:3px">Avg 1h 38m · Target &lt;2 hrs</div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">VIP Ratings</span><span style="color:var(--green);font-weight:700">4.7 / 5</span></div><div class="pbar"><div class="pfill pf-g" style="width:94%"></div></div><div style="font-size:11px;color:var(--hint);margin-top:3px">Based on 42 VIP reviews this month</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Monthly Trend — Quality Score</span></div>
+        <div style="padding:16px">
+          <div class="chartbars" id="qs-chart" style="height:100px"></div>
+          <div class="clabels" id="qs-labels"></div>
+          <div style="display:flex;align-items:center;gap:16px;margin-top:12px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:6px"><div style="width:24px;height:8px;background:var(--teal);border-radius:2px"></div><span style="font-size:12px;color:var(--muted)">Quality Score</span></div>
+            <div style="font-size:12px;color:var(--hint)">Target: ≥80 · Current: 82 · Peak: 87 (Feb)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ INVOICES ═══ -->
+    <div class="page" id="p-invoices">
+      <div class="metrics m4">
+        <div class="mcard"><div class="mlabel">Gross Revenue</div><div class="mval">₹4,28,000</div></div>
+        <div class="mcard"><div class="mlabel">Platform Fee</div><div class="mval" style="color:var(--red)">₹47,080</div></div>
+        <div class="mcard"><div class="mlabel">SLA Deductions</div><div class="mval" style="color:var(--amber)">₹2,400</div></div>
+        <div class="mcard"><div class="mlabel">Net Payout</div><div class="mval" style="color:var(--green)">₹3,78,520</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Monthly Invoice</span>
+          <div class="card-acts">
+            <select style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--r8);font-size:13px;background:#fff;font-family:inherit"><option>April 2026</option><option>March 2026</option><option>February 2026</option></select>
+            <button class="btn sm primary" onclick="printInvoice()">Download PDF</button>
+          </div>
+        </div>
+        <div style="padding:20px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+            <div><div style="font-size:16px;font-weight:800">INVOICE</div><div style="font-size:12px;color:var(--hint);margin-top:2px">Invoice # INV-2026-04-HFL</div></div>
+            <div style="text-align:right"><div style="font-size:12px;color:var(--hint)">Period</div><div style="font-weight:700">01–30 Apr 2026</div></div>
+          </div>
+          <div class="frow f2" style="margin-bottom:16px">
+            <div style="font-size:12px"><div style="font-weight:700;margin-bottom:5px">Provider</div><div>HealthFirst Labs</div><div style="color:var(--hint)">Jubilee Hills, Hyderabad</div><div style="color:var(--hint)">NABL-ACC-2024-HFL</div></div>
+            <div style="font-size:12px"><div style="font-weight:700;margin-bottom:5px">Remit to</div><div>Checkupify (Unicribe Technologies)</div><div style="color:var(--hint)">GSTIN: 36XXXXX1234X1Z5</div></div>
+          </div>
+          <div id="inv-table"></div>
+          <div style="margin-top:16px;padding-top:14px;border-top:2px solid var(--border)">
+            <div class="iline" style="border-bottom:1px solid var(--bord2)"><span class="lbl">Bookings (342)</span><span>₹4,28,000</span></div>
+            <div class="iline" style="border-bottom:1px solid var(--bord2)"><span class="lbl">Platform Fee 11%</span><span style="color:var(--red)">−₹47,080</span></div>
+            <div class="iline" style="border-bottom:1px solid var(--bord2)"><span class="lbl">SLA Deductions</span><span style="color:var(--amber)">−₹2,400</span></div>
+            <div class="iline" style="font-weight:800;font-size:14px;border-bottom:none"><span>Net Payout</span><span style="color:var(--green)">₹3,78,520</span></div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:10px">
+            <button class="btn primary" onclick="toast('s','Invoice approved! Payout of ₹3,78,520 scheduled for 25 Apr.')">Approve Invoice</button>
+            <button class="btn" onclick="toast('i','Dispute form opened')">Raise Dispute</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Payout History</span></div>
+        <div class="tw"><table>
+          <thead><tr><th>Month</th><th>Bookings</th><th>Gross</th><th>Net Payout</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody id="payout-table"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ═══ RECONCILIATION ═══ -->
+    <div class="page" id="p-recon">
+      <div class="metrics m3">
+        <div class="mcard"><div class="mcard-top" style="background:var(--teal)"></div><div class="mlabel">Total Records</div><div class="mval">342</div></div>
+        <div class="mcard"><div class="mcard-top" style="background:#10B981"></div><div class="mlabel">Matched</div><div class="mval" style="color:var(--green)">336</div></div>
+        <div class="mcard"><div class="mcard-top" style="background:#EF4444"></div><div class="mlabel">Mismatch</div><div class="mval" style="color:var(--red)">6</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Reconciliation Log</span><button class="btn sm primary" onclick="exportCSV()">Export</button></div>
+        <div class="tw"><table>
+          <thead><tr><th>Apt ID</th><th>Patient</th><th>Lab Amount (₹)</th><th>CK Amount (₹)</th><th>Diff (₹)</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="recon-table"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ═══ CONTRACT ═══ -->
+    <div class="page" id="p-contract">
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Contract Details</span>
+          <div class="card-acts">
+            <span class="badge bg">Active Contract</span>
+            <button class="btn sm" onclick="toast('i','Downloading contract PDF')">Download PDF</button>
+          </div>
+        </div>
+        <div style="padding:20px">
+          <div class="frow f2" style="margin-bottom:18px">
+            <div style="border:1px solid var(--border);border-radius:var(--r10);padding:14px">
+              <div style="font-size:11px;color:var(--hint);margin-bottom:3px">Contract Period</div>
+              <div style="font-size:15px;font-weight:700">01 Jan 2026 — 31 Dec 2026</div>
+              <div style="font-size:12px;color:var(--teal);margin-top:5px">251 days remaining</div>
+            </div>
+            <div style="border:1px solid var(--border);border-radius:var(--r10);padding:14px">
+              <div style="font-size:11px;color:var(--hint);margin-bottom:3px">Platform Fee</div>
+              <div style="font-size:15px;font-weight:700">11%</div>
+              <div style="font-size:12px;color:var(--hint);margin-top:5px">On all confirmed bookings</div>
+            </div>
+            <div style="border:1px solid var(--border);border-radius:var(--r10);padding:14px">
+              <div style="font-size:11px;color:var(--hint);margin-bottom:3px">Network Type</div>
+              <div style="font-size:15px;font-weight:700">Premium</div>
+              <div class="badge bb" style="margin-top:6px">NABL Certified</div>
+            </div>
+            <div style="border:1px solid var(--border);border-radius:var(--r10);padding:14px">
+              <div style="font-size:11px;color:var(--hint);margin-bottom:3px">Payment Cycle</div>
+              <div style="font-size:15px;font-weight:700">Monthly</div>
+              <div style="font-size:12px;color:var(--hint);margin-top:5px">Settled on 25th every month</div>
+            </div>
+          </div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px">Agreed Packages & Masking IDs</div>
+          <div class="tw"><table id="contract-pkg-table">
+            <thead><tr><th>Package Name</th><th>Masking ID</th><th>MRP (₹)</th><th>Platform Price (₹)</th><th>Your Share</th><th>Mode</th><th>Status</th></tr></thead>
+            <tbody id="contract-pkg-body"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ POC & SPOC ═══ -->
+    <div class="page" id="p-poc">
+      <div class="g2">
+        <div class="card">
+          <div class="card-head"><span class="card-title">Provider POC (Your Side)</span></div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+            <div style="border:1px solid var(--border);border-radius:var(--r10);padding:14px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="width:44px;height:44px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0">RK</div>
+                <div>
+                  <div style="font-weight:700">Dr. Ravi Kumar</div>
+                  <div style="font-size:12px;color:var(--hint)">Lab Director (Primary Contact)</div>
+                  <div class="badge bg" style="margin-top:4px">Primary POC</div>
+                </div>
+              </div>
+              <div style="margin-top:12px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)">
+                <div>📞 <span style="color:var(--ink);cursor:pointer" onclick="toast('i','Calling: +91-98765 43210')">+91-98765 43210</span></div>
+                <div>📧 <span style="color:var(--ink)">ravi@healthfirst.in</span></div>
+              </div>
+            </div>
+            <div style="border:1px solid var(--border);border-radius:var(--r10);padding:14px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="width:44px;height:44px;border-radius:50%;background:#6366F1;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0">SJ</div>
+                <div>
+                  <div style="font-weight:700">Sandhya Joshi</div>
+                  <div style="font-size:12px;color:var(--hint)">Finance Contact</div>
+                  <span class="badge bn" style="margin-top:4px">Finance POC</span>
+                </div>
+              </div>
+              <div style="margin-top:12px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)">
+                <div>📞 <span style="color:var(--ink);cursor:pointer" onclick="toast('i','Calling Sandhya')">+91-99001 87234</span></div>
+                <div>📧 <span style="color:var(--ink)">finance@healthfirst.in</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Checkupify SPOC (Our Side)</span></div>
+          <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+            <div style="border:1px solid var(--border);border-radius:var(--r10);padding:14px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="width:44px;height:44px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0">MS</div>
+                <div>
+                  <div style="font-weight:700">Meera Subramaniam</div>
+                  <div style="font-size:12px;color:var(--hint)">Relationship Manager</div>
+                  <div class="badge bg" style="margin-top:4px">Primary SPOC</div>
+                </div>
+              </div>
+              <div style="margin-top:12px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)">
+                <div>📞 <span style="color:var(--ink);cursor:pointer" onclick="toast('i','Calling Meera')">+91-98001 23456</span></div>
+                <div>📧 <span style="color:var(--ink)">meera@checkupify.com</span></div>
+                <div style="margin-top:6px"><button class="btn sm primary" onclick="toast('s','WhatsApp opened with Meera')">💬 WhatsApp</button></div>
+              </div>
+            </div>
+            <div style="border:1px solid var(--border);border-radius:var(--r10);padding:14px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="width:44px;height:44px;border-radius:50%;background:#F59E0B;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0">RK</div>
+                <div>
+                  <div style="font-weight:700">Rahul Krishnamurthy</div>
+                  <div style="font-size:12px;color:var(--hint)">Operations Support</div>
+                  <span class="badge ba" style="margin-top:4px">Ops SPOC</span>
+                </div>
+              </div>
+              <div style="margin-top:12px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)">
+                <div>📞 <span style="color:var(--ink);cursor:pointer" onclick="toast('i','Calling Rahul')">+91-97001 45678</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Facility Update Notifications</span></div>
+        <div style="padding:16px">
+          <div class="tgl-row"><div class="tgl-info"><h4>Send regular facility update notifications</h4><p>Checkupify team will be reminded to check your facility status</p></div><button class="tgl on" onclick="this.classList.toggle('on')"></button></div>
+          <div class="fgrp" style="margin-top:12px"><label>Notification Interval</label>
+            <select><option>Every 2 hours</option><option>Every 4 hours</option><option>Daily</option><option>Weekly</option></select>
+          </div>
+          <div class="fgrp"><label>Include in update</label>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+              <label style="display:flex;align-items:center;gap:8px;font-weight:500;text-transform:none;letter-spacing:0"><input type="checkbox" checked style="accent-color:var(--teal)"> Available slot count</label>
+              <label style="display:flex;align-items:center;gap:8px;font-weight:500;text-transform:none;letter-spacing:0"><input type="checkbox" checked style="accent-color:var(--teal)"> Equipment status</label>
+              <label style="display:flex;align-items:center;gap:8px;font-weight:500;text-transform:none;letter-spacing:0"><input type="checkbox" style="accent-color:var(--teal)"> Staff availability</label>
+            </div>
+          </div>
+          <button class="btn primary" onclick="toast('s','Notification settings saved')">Save Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SETTINGS ═══ -->
+    <div class="page" id="p-settings">
+      <div style="display:grid;grid-template-columns:200px 1fr;gap:16px">
+        <div class="card" style="padding:8px;align-self:start">
+          <div class="profile-tab on" id="set-tab-general" onclick="switchSetTab('general')">General</div>
+          <div class="profile-tab" id="set-tab-sla" onclick="switchSetTab('sla')">SLA Settings</div>
+          <div class="profile-tab" id="set-tab-notif" onclick="switchSetTab('notif')">Notifications</div>
+          <div class="profile-tab" id="set-tab-logo" onclick="switchSetTab('logo')">Lab Logo</div>
+          <div class="profile-tab" id="set-tab-hours" onclick="switchSetTab('hours')">Working Hours</div>
+        </div>
+        <div class="card" id="set-content">
+          <div id="set-general">
+            <div class="card-head"><span class="card-title">General Settings</span></div>
+            <div style="padding:18px">
+              <div class="frow f2">
+                <div class="fgrp"><label>Lab Name</label><input value="HealthFirst Labs"></div>
+                <div class="fgrp"><label>City</label><input value="Hyderabad"></div>
+                <div class="fgrp"><label>Contact Email</label><input type="email" value="info@healthfirst.in"></div>
+                <div class="fgrp"><label>Contact Phone</label><input value="+91-98765 43210"></div>
+              </div>
+              <button class="btn primary" onclick="toast('s','General settings saved')">Save Changes</button>
+            </div>
+          </div>
+          <div id="set-sla" style="display:none">
+            <div class="card-head"><span class="card-title">SLA & Penalty Settings</span></div>
+            <div style="padding:18px">
+              <div class="tgl-row"><div class="tgl-info"><h4>SLA Penalties Active (Admin Controlled)</h4><p>This is set by Checkupify admin. Contact your RM to discuss.</p></div><span class="badge br">Set by Admin</span></div>
+              <div class="alert alert-b" style="margin-top:14px"><span>Your current SLA targets: Confirmation &lt;2hrs · First Report &lt;6hrs · Full Report &lt;36hrs · Rejection &lt;2%</span></div>
+            </div>
+          </div>
+          <div id="set-notif" style="display:none">
+            <div class="card-head"><span class="card-title">Notification Preferences</span></div>
+            <div style="padding:18px">
+              <div class="tgl-row"><div class="tgl-info"><h4>New Booking Alerts</h4><p>Instant WhatsApp when a booking arrives</p></div><button class="tgl on" onclick="this.classList.toggle('on')"></button></div>
+              <div class="tgl-row"><div class="tgl-info"><h4>SLA Warning Alerts</h4><p>Alert when approaching SLA breach</p></div><button class="tgl on" onclick="this.classList.toggle('on')"></button></div>
+              <div class="tgl-row"><div class="tgl-info"><h4>Invoice Notifications</h4><p>Monthly invoice ready to approve</p></div><button class="tgl on" onclick="this.classList.toggle('on')"></button></div>
+              <button class="btn primary" style="margin-top:14px" onclick="toast('s','Notification settings saved')">Save</button>
+            </div>
+          </div>
+          <div id="set-logo" style="display:none">
+            <div class="card-head"><span class="card-title">Lab Logo</span></div>
+            <div style="padding:18px">
+              <div style="border:2px dashed var(--border);border-radius:var(--r10);padding:40px;text-align:center;cursor:pointer;margin-bottom:14px" onclick="uploadLogo()">
+                <div id="logo-preview" style="font-size:42px;margin-bottom:10px">🏥</div>
+                <div style="font-size:14px;font-weight:600;color:var(--slate)">Drop logo here or click to browse</div>
+                <div style="font-size:12px;color:var(--hint);margin-top:4px">PNG, JPG, SVG · Recommended: 200×60px · Max 2MB</div>
+              </div>
+              <div class="fgrp"><label>Lab Display Name</label><input value="HealthFirst Labs" placeholder="Name shown on portal"></div>
+              <button class="btn primary" onclick="toast('s','Logo and name saved successfully!')">Save Logo</button>
+            </div>
+          </div>
+          <div id="set-hours" style="display:none">
+            <div class="card-head"><span class="card-title">Working Hours</span></div>
+            <div style="padding:18px">
+              <div style="display:flex;flex-direction:column;gap:10px">
+                ${['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map((d,i)=>`<div style="display:flex;align-items:center;gap:12px"><span style="width:90px;font-size:13px;font-weight:500">${d}</span><input type="time" value="${i<5?'07:00':'08:00'}" style="padding:5px 8px;border:1px solid var(--border);border-radius:var(--r6);font-size:12px;font-family:inherit"><span style="font-size:12px;color:var(--hint)">to</span><input type="time" value="${i<5?'21:00':'17:00'}" style="padding:5px 8px;border:1px solid var(--border);border-radius:var(--r6);font-size:12px;font-family:inherit"><button class="tgl ${i<6?'on':''}" onclick="this.classList.toggle('on')" title="Day open/closed"></button><span style="font-size:11px;color:var(--hint)">${i<6?'Open':'Closed'}</span></div>`).join('')}
+              </div>
+              <button class="btn primary" style="margin-top:14px" onclick="toast('s','Working hours saved')">Save Hours</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- ════ MODALS ════ -->
+
+<!-- CONFIRM APPOINTMENT MODAL -->
+<div class="ov" id="conf-apt-modal" onclick="if(event.target===this)closeMod('conf-apt-modal')">
+  <div class="modal modal-sm">
+    <div class="mhead">
+      <div><div class="mtitle">Confirm Appointment</div><div style="font-size:12px;color:var(--hint);margin-top:3px" id="cam-sub">Loading...</div></div>
+      <button class="mclose" onclick="closeMod('conf-apt-modal')">✕</button>
+    </div>
+    <div class="mbody" id="cam-body"></div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeMod('conf-apt-modal')">Cancel</button>
+      <button class="btn primary" onclick="doConfirm()">✓ Confirm Appointment</button>
+    </div>
+  </div>
+</div>
+
+<!-- REJECT APPOINTMENT MODAL -->
+<div class="ov" id="rej-modal" onclick="if(event.target===this)closeMod('rej-modal')">
+  <div class="modal modal-sm">
+    <div class="mhead">
+      <div><div class="mtitle">Reject Appointment</div><div style="font-size:12px;color:var(--hint);margin-top:3px" id="rm-sub">Select reason</div></div>
+      <button class="mclose" onclick="closeMod('rej-modal')">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="fgrp"><label>Rejection Reason <span class="req">*</span></label>
+        <select id="rej-reason">
+          <option value="">Select reason</option>
+          <option>Lab capacity full for this slot</option>
+          <option>Equipment not available</option>
+          <option>Patient not eligible</option>
+          <option>Location not serviceable</option>
+          <option>Sample collection not feasible</option>
+          <option>Requested by patient</option>
+          <option>Emergency lab closure</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="fgrp"><label>Additional Notes</label><textarea style="height:70px;resize:none" placeholder="Optional reason details..."></textarea></div>
+      <div style="background:var(--redbg);border:1px solid var(--redbord);border-radius:var(--r8);padding:11px 14px;font-size:12px;color:#991B1B">
+        Rejecting this appointment will: auto-notify patient via WhatsApp, trigger refund process, and impact your rejection rate SLA.
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeMod('rej-modal')">Cancel</button>
+      <button class="btn danger" onclick="doReject()">Reject Appointment</button>
+    </div>
+  </div>
+</div>
+
+<!-- SKIP TEST CONFIRM MODAL -->
+<div class="ov" id="skip-modal" onclick="if(event.target===this)closeMod('skip-modal')">
+  <div class="modal modal-sm">
+    <div class="mhead">
+      <div><div class="mtitle">Confirm Test Skip</div></div>
+      <button class="mclose" onclick="closeMod('skip-modal')">✕</button>
+    </div>
+    <div class="mbody">
+      <p style="font-size:13px;color:var(--slate);margin-bottom:14px">You are marking <strong id="skip-test-name">Audiometry</strong> as <strong style="color:var(--amber)">Skipped by Patient</strong>.</p>
+      <div class="alert alert-b" style="margin-bottom:14px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg>
+        <span>A consent email will be auto-sent to the patient's registered email confirming this test was skipped. This will also be logged in the appointment timeline.</span>
+      </div>
+      <div class="fgrp"><label>Reason for skip <span class="req">*</span></label>
+        <select id="skip-reason">
+          <option>Patient declined test</option>
+          <option>Patient did not meet prerequisite</option>
+          <option>Patient allergy / contraindication</option>
+          <option>Equipment unavailable</option>
+          <option>Prior result available</option>
+        </select>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeMod('skip-modal')">Cancel</button>
+      <button class="btn amber-btn" onclick="confirmSkip()">✕ Mark as Skipped & Send Email</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOT DONE CONFIRM MODAL -->
+<div class="ov" id="nd-modal" onclick="if(event.target===this)closeMod('nd-modal')">
+  <div class="modal modal-sm">
+    <div class="mhead">
+      <div><div class="mtitle">Mark Test as Not Done</div></div>
+      <button class="mclose" onclick="closeMod('nd-modal')">✕</button>
+    </div>
+    <div class="mbody">
+      <p style="font-size:13px;color:var(--slate);margin-bottom:14px">Marking <strong id="nd-test-name">CBC</strong> as <strong style="color:var(--red)">Not Done</strong>.</p>
+      <div class="alert alert-a" style="margin-bottom:14px">
+        <span>This will notify the patient via email that this test was not completed. The appointment cannot move to 'Received' until this is resolved or explicitly overridden by admin.</span>
+      </div>
+      <div class="fgrp"><label>Reason <span class="req">*</span></label>
+        <select><option>Equipment failure</option><option>Sample quality issue</option><option>Reagent unavailability</option><option>Other</option></select>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="closeMod('nd-modal')">Cancel</button>
+      <button class="btn danger" onclick="confirmNotDone()">Mark as Not Done & Notify</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ── Live Supabase client ──
+const SB=window.supabase.createClient('https://lguoussmsusadvmexjkb.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxndW91c3Ntc3VzYWR2bWV4amtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3Njc1OTcsImV4cCI6MjA5MDM0MzU5N30.Mq6nW2ItZqywuIbVeOUR9HQOglZOL5Wm0uSFwT6hfjw');
+let SESSION=null;
+// ══════════════════════════════════════
+//  DATA (live from Supabase)
+// ══════════════════════════════════════
+const PATIENTS=['Priya Sharma','Ravi Kumar','Ananya Reddy','Suresh Mehta','Meera Pillai','Godwin Raj','Vimal Raj G','Prafulla Chandra','Ashwin Sadanand','Biswajeet M']
+const TESTS=['Full Body Checkup (84 tests)','CBC + Thyroid Panel','Cardiac Screening','Diabetes Care Panel','Women\'s Wellness','Pre-employment Health','Senior Citizen Package','Kidney Function Panel']
+const STAGES=['New','Confirmed','Completed','Pending Reports','Partially Received','Received','Rejected','No Show']
+const SC={'New':'bn','Confirmed':'bg','Completed':'bt','Pending Reports':'ba','Partially Received':'bp','Received':'bg','Rejected':'br','No Show':'br'}
+function ri(a){return a[Math.floor(Math.random()*a.length)]}
+function rn(a,b){return Math.floor(a+Math.random()*(b-a))}
+function rId(){return'CK-APT-'+Math.random().toString(36).substr(2,8).toUpperCase()}
+function rDate(d=30){const dt=new Date();dt.setDate(dt.getDate()-rn(0,d));return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}
+function rPhone(){return'+91-'+rn(7000000000,9999999999)}
+function fmt(n){return'₹'+Math.round(n).toLocaleString('en-IN')}
+
+let PENDING_APT=[], CONFIRM_PENDING=[], ALL_APT=[], PKG_DATA=[]
+
+// Map a Supabase booking row -> the shapes the render fns expect
+const TODAY=new Date().toISOString().slice(0,10)
+function dmy(s){ if(!s) return '—'; const d=new Date(s); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) }
+function minsLeft(created){ const ms=new Date(created).getTime()+7200000-Date.now(); return Math.max(0,Math.round(ms/60000)) }
+
+async function loadData(){
+  // bookings + package name
+  const { data:bk } = await SB.from('bookings')
+    .select('*,package:packages(name)')
+    .order('created_at',{ascending:false}).limit(500)
+  const rows = bk||[]
+  const pkgName = b => (b.package && b.package.name) ? b.package.name : 'Health Package'
+
+  // CONFIRM_PENDING = stage New
+  CONFIRM_PENDING = rows.filter(b=>b.stage==='New').map(b=>({
+    id:b.id, patient:b.patient_name, test:pkgName(b),
+    slot:(b.slot_time||'').slice(0,5)||'—', type:b.collection_type||'In Clinic',
+    timeLeft:minsLeft(b.created_at), phone:b.patient_phone
+  }))
+
+  // PENDING_APT = confirmed / in-progress / partially (reports to upload)
+  PENDING_APT = rows.filter(b=>['Confirmed','In Progress','Partially Uploaded','Report Uploaded'].includes(b.stage)).map(b=>{
+    const overdue = b.appointment_date && b.appointment_date < TODAY
+    return {
+      id:b.id, patient:b.patient_name, test:pkgName(b), date:dmy(b.appointment_date),
+      gender:b.patient_gender||'—', age:b.patient_age||'—', phone:b.patient_phone,
+      vip:(b.amount||0)>4000, overdue,
+      timeLeft: overdue ? 'Overdue!' : (b.sla_status||'On Track')
+    }
+  })
+
+  // ALL_APT = everything
+  ALL_APT = rows.map(b=>({
+    id:b.id, patient:b.patient_name, test:pkgName(b), date:dmy(b.appointment_date),
+    time:(b.slot_time||'').slice(0,5)||'—', type:b.collection_type||'In Clinic',
+    stage:b.stage, rejReason:b.rejection_reason||null
+  }))
+
+  // PKG_DATA from packages
+  const { data:pk } = await SB.from('packages').select('id,name,slug,price,test_count').limit(50)
+  PKG_DATA = (pk||[]).map(p=>{
+    const price=p.price||0
+    return { name:p.name, code:(p.slug||'PKG').toUpperCase().slice(0,14),
+             mask:'HFL-'+(p.slug||'pkg').slice(0,6).toUpperCase(),
+             mrp:Math.round(price*1.6), price, share:Math.round(price*0.89) }
+  })
+
+  setLiveNumbers(rows)
+}
+
+// Update the hard-coded dashboard numbers + sidebar badges with real counts
+function setLiveNumbers(rows){
+  const newQ = rows.filter(b=>b.stage==='New').length
+  const pending = PENDING_APT.length
+  const today = rows.filter(b=>b.appointment_date===TODAY).length
+  const tStr = new Date(Date.now()+86400000).toISOString().slice(0,10)
+  const tomorrow = rows.filter(b=>b.appointment_date===tStr).length
+  const next7 = rows.filter(b=>{ if(!b.appointment_date) return false; const d=new Date(b.appointment_date); const diff=(d-new Date(TODAY))/86400000; return diff>=0 && diff<=7 }).length
+  const set=(id,v)=>{ const e=document.getElementById(id); if(e)e.textContent=v }
+  set('m-today',today); set('m-tomorrow',tomorrow); set('m-next7',next7)
+  set('m-needs',newQ); set('m-reports',pending)
+  set('sb-confirm-badge',newQ); set('sb-reports-badge',pending); set('tb-confirm-badge',newQ)
+}
+
+let currentConfirmId=null,currentRejectId=null,currentSkipTest=null,currentNdTest=null
+let penaltyMode=true // can be toggled by admin
+
+// ══════════════════════════════════════
+//  RENDER FUNCTIONS
+// ══════════════════════════════════════
+function renderDashReports(){
+  const tb=document.getElementById('dash-reports');if(!tb)return
+  tb.innerHTML=PENDING_APT.slice(0,6).map(a=>`<tr style="${a.overdue?'background:var(--redbg)':''}">
+    <td style="font-family:monospace;font-size:11px;color:#00875A;font-weight:700">${a.id}</td>
+    <td><div style="font-weight:600">${a.patient}${a.vip?'<span class="badge ba" style="margin-left:4px;font-size:9px">VIP</span>':''}</div></td>
+    <td style="font-size:12px;max-width:130px">${a.test.split(' ').slice(0,3).join(' ')}</td>
+    <td style="font-size:12px">${a.date}</td>
+    <td><span class="badge ${a.overdue?'br':'ba'}">${a.timeLeft}</span></td>
+    <td><span class="badge ${a.overdue?'br':'ba'}">${a.overdue?'Overdue':'Pending Upload'}</span></td>
+    <td><button class="abt u" onclick="openUploadPanel('${a.id}','${a.patient}','${a.test}')">Upload</button></td>
+  </tr>`).join('')
+}
+
+function renderConfirmTable(){
+  const tb=document.getElementById('confirm-table');if(!tb)return
+  tb.innerHTML=CONFIRM_PENDING.map(a=>`<tr style="${a.timeLeft<30?'background:var(--redbg)':''}">
+    <td style="font-family:monospace;font-size:11px;color:#00875A;font-weight:700;cursor:pointer" onclick="openConfirmModal('${a.id}','${a.patient}','${a.test}','${a.slot}')">${a.id}</td>
+    <td><div style="font-weight:600">${a.patient}</div><div style="font-size:11px;color:var(--hint)">${a.phone||rPhone()}</div></td>
+    <td>
+      <div style="font-size:12px;font-weight:600;margin-bottom:4px">${a.test}</div>
+      <span class="badge bb" style="font-size:10px">Package details on given slot</span>
+    </td>
+    <td><div style="font-weight:600">${a.slot}</div><div style="font-size:11px;color:var(--hint)">${a.type}</div></td>
+    <td><span class="badge bb">${a.type}</span></td>
+    <td><span class="badge ${a.timeLeft<30?'br':a.timeLeft<60?'ba':'bg'}" style="font-size:12px;font-weight:700">${a.timeLeft} min left</span></td>
+    <td style="white-space:nowrap">
+      <button class="abt c" onclick="openConfirmModal('${a.id}','${a.patient}','${a.test}','${a.slot}')">✓ Confirm</button>
+      <button class="abt r" style="margin-left:4px" onclick="openRejectModal('${a.id}','${a.patient}')">✕ Reject</button>
+    </td>
+  </tr>`).join('')
+}
+
+function renderPendingTable(filter='all'){
+  const tb=document.getElementById('pr-table');if(!tb)return
+  let data=PENDING_APT
+  if(filter==='overdue')data=data.filter(a=>a.overdue)
+  tb.innerHTML=data.map(a=>`<tr style="${a.overdue?'background:var(--redbg)':''}">
+    <td style="font-family:monospace;font-size:11px;color:#00875A;font-weight:700">${a.id}</td>
+    <td><div style="font-weight:600">${a.patient}${a.vip?'<span class="badge ba" style="margin-left:4px;font-size:9px">VIP</span>':''}</div><div style="font-size:11px;color:var(--hint)">${a.gender}, ${a.age}</div></td>
+    <td style="font-size:12px;max-width:150px">${a.test}</td>
+    <td style="font-size:12px">${a.date}</td>
+    <td style="font-size:12px">${a.overdue?'<span style="color:var(--red);font-weight:700">OVERDUE</span>':'Due '+a.date}</td>
+    <td><span class="badge ${a.overdue?'br':parseInt(a.timeLeft)<12?'ba':'bg'}">${a.timeLeft}</span></td>
+    <td><div style="display:flex;gap:4px;flex-wrap:wrap">
+      <span style="font-size:11px;padding:2px 6px;border-radius:4px;background:var(--amberbg);color:#92400E">3 pending</span>
+      <span style="font-size:11px;padding:2px 6px;border-radius:4px;background:var(--greenbg);color:#065F46">2 done</span>
+    </div></td>
+    <td><span class="badge ${a.overdue?'br':'ba'}">${a.overdue?'Overdue':'Pending Upload'}</span></td>
+    <td><button class="abt u" onclick="openUploadPanel('${a.id}','${a.patient}','${a.test}')">Upload</button></td>
+  </tr>`).join('')
+}
+
+function renderAllApt(filter='all'){
+  const tb=document.getElementById('all-apt-table');if(!tb)return
+  let data=filter==='all'||filter==='today'||filter==='tomorrow'?ALL_APT:ALL_APT.filter(a=>a.stage===filter)
+  tb.innerHTML=data.map(a=>`<tr>
+    <td style="font-family:monospace;font-size:11px;color:#00875A;font-weight:700">${a.id}</td>
+    <td><div style="font-weight:600">${a.patient}</div></td>
+    <td style="font-size:12px;max-width:150px">${a.test}</td>
+    <td><div style="font-size:12px">${a.date}</div><div style="font-size:11px;color:var(--hint)">${a.time} IST</div></td>
+    <td><span class="badge bb">${a.type}</span></td>
+    <td>
+      <span class="badge ${SC[a.stage]||'bgr'}">
+        <span class="dot ${['Confirmed','Received','Completed'].includes(a.stage)?'dot-g':['Rejected','No Show'].includes(a.stage)?'dot-r':'dot-a'}" style="margin-right:3px"></span>
+        ${a.stage}
+      </span>
+      ${a.rejReason?`<div style="font-size:11px;color:var(--red);margin-top:3px">Reason: ${a.rejReason}</div>`:''}
+    </td>
+    <td style="white-space:nowrap">
+      ${a.stage==='New'||a.stage==='Confirmed'?`<button class="abt r" onclick="openRejectModal('${a.id}','${a.patient}')">Reject</button>`:''}
+      ${a.stage==='Pending Reports'||a.stage==='Partially Received'?`<button class="abt u" onclick="openUploadPanel('${a.id}','${a.patient}','${a.test}')">Upload</button>`:''}
+      <button class="abt" onclick="toast('i','Downloading voucher for ${a.patient}')">📄 Voucher</button>
+    </td>
+  </tr>`).join('')
+}
+
+function renderReconTable(){
+  const tb=document.getElementById('recon-table');if(!tb)return
+  const data=Array.from({length:8},(_,i)=>{
+    const lab=rn(1800,5000),match=Math.random()>.22
+    const ck=match?lab:lab+rn(-200,200)
+    return{id:rId(),patient:PATIENTS[i%PATIENTS.length],lab,ck,diff:lab-ck,match}
+  })
+  tb.innerHTML=data.map(d=>`<tr style="${!d.match?'background:var(--redbg)':''}">
+    <td style="font-family:monospace;font-size:11px;color:#00875A;font-weight:700">${d.id}</td>
+    <td style="font-weight:600">${d.patient}</td>
+    <td>${fmt(d.lab)}</td>
+    <td>${fmt(d.ck)}</td>
+    <td style="font-weight:700;color:${Math.abs(d.diff)<1?'var(--hint)':d.diff>0?'var(--red)':'var(--green)'}">
+      ${Math.abs(d.diff)<1?'—':(d.diff>0?'+':'')+fmt(d.diff)}
+    </td>
+    <td><span class="badge ${d.match?'bg':'br'}">${d.match?'✓ Matched':'⚠ Mismatch'}</span></td>
+    <td>${!d.match?`<button class="abt r" onclick="toast('i','Dispute form opened for ${d.id}')">Raise Dispute</button>`:''}</td>
+  </tr>`).join('')
+}
+
+function renderContractPkg(){
+  const tb=document.getElementById('contract-pkg-body');if(!tb)return
+  tb.innerHTML=PKG_DATA.map(p=>`<tr>
+    <td><div style="font-weight:700">${p.name}</div></td>
+    <td style="font-family:monospace;font-size:12px;color:var(--teal-d);font-weight:700">${p.mask}</td>
+    <td>₹${p.mrp.toLocaleString('en-IN')}</td>
+    <td>₹${p.price.toLocaleString('en-IN')}</td>
+    <td style="font-weight:700;color:var(--green)">₹${p.share.toLocaleString('en-IN')}</td>
+    <td><span class="badge bb">In Clinic + Home</span></td>
+    <td><span class="badge bg">Active</span></td>
+  </tr>`).join('')
+}
+
+function renderPayoutTable(){
+  const tb=document.getElementById('payout-table');if(!tb)return
+  const months=['March 2026','February 2026','January 2026','December 2025']
+  tb.innerHTML=months.map((m,i)=>`<tr>
+    <td style="font-weight:600">${m}</td>
+    <td>${rn(280,360)}</td>
+    <td>₹${rn(350000,480000).toLocaleString('en-IN')}</td>
+    <td style="font-weight:700;color:var(--green)">₹${rn(310000,420000).toLocaleString('en-IN')}</td>
+    <td><span class="badge ${i===0?'ba':'bg'}">${i===0?'Processing':'Paid'}</span></td>
+    <td style="font-size:12px">${i===0?'25 Apr 2026':'25 '+m.split(' ')[0]+' '+m.split(' ')[1]}</td>
+  </tr>`).join('')
+}
+
+function renderQsSlaMetrics(){
+  const el=document.getElementById('qs-sla-metrics');if(!el)return
+  const metrics=[
+    {label:'Confirmation TAT',target:'< 2 hours',val:'1h 38m',score:94,color:'var(--green)',ok:true},
+    {label:'Rejection Rate',target:'< 2% MTD',val:'1.4%',score:30,color:'var(--green)',ok:true},
+    {label:'First Reports TAT',target:'< 6 hours',val:'5h 42m',score:95,color:'var(--amber)',ok:false},
+    {label:'Full Reports TAT',target:'< 36 hours',val:'28h 12m',score:78,color:'var(--green)',ok:true},
+  ]
+  el.innerHTML=metrics.map(m=>`<div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+      <span style="color:var(--muted);font-weight:500">${m.label} <span style="color:var(--hint);font-weight:400">(${m.target})</span></span>
+      <span style="font-weight:700;color:${m.ok?'var(--green)':'var(--amber)'}">${m.val}</span>
+    </div>
+    <div class="pbar"><div class="pfill" style="width:${m.score}%;background:${m.ok?'#10B981':'#F59E0B'}"></div></div>
+    <div style="font-size:11px;color:var(--hint);margin-top:3px">${m.ok?'✓ Within SLA':'⚠ Near SLA limit'}</div>
+  </div>`).join('')
+}
+
+function renderTatBreach(){
+  const tb=document.getElementById('tat-breach-rows');if(!tb)return
+  const rows=[
+    {type:'Confirmation',target:'<2 hrs',actual:'1h 38m',penalty:'₹0',pct:'0%',ok:true},
+    {type:'First Report',target:'<6 hrs',actual:'5h 42m',penalty:'₹1,200',pct:'+14%',ok:false},
+    {type:'Full Report',target:'<36 hrs',actual:'28h 12m',penalty:'₹0',pct:'0%',ok:true},
+    {type:'Rejection Rate',target:'<2% MTD',actual:'1.4%',penalty:'₹1,200',pct:'+0.4% over',ok:false},
+  ]
+  const head=document.getElementById('tat-col-head')
+  if(head)head.textContent=penaltyMode?'Penalty':'Deviation'
+  tb.innerHTML=rows.map(r=>`<tr style="${!r.ok?'background:var(--redbg)':''}">
+    <td style="padding:8px 0;font-weight:600">${r.type}</td>
+    <td style="padding:8px;text-align:center;color:var(--hint)">${r.target}</td>
+    <td style="padding:8px;text-align:center;font-weight:600;color:${r.ok?'var(--green)':'var(--amber)'}">${r.actual}</td>
+    <td style="padding:8px;text-align:right;font-weight:700;color:${r.ok?'var(--hint)':'var(--red)'}">
+      ${penaltyMode?r.penalty:r.pct}
+    </td>
+  </tr>`).join('')
+}
+
+// ══════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════
+const PTITLES={dashboard:'Dashboard','confirm-pending':'Confirmation Pending','pending-reports':'Pending Report Uploads',appointments:'All Appointments',tat:'TAT Analytics',quality:'Quality Score',invoices:'Invoices & Payouts',recon:'Reconciliation',contract:'Contract & Packages',poc:'POC & SPOC',settings:'Settings'}
+function nav(name,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('show'))
+  const pg=document.getElementById('p-'+name)
+  if(pg)pg.classList.add('show')
+  const title=PTITLES[name]||name
+  document.getElementById('bc').innerHTML=`Home / <span>${title}</span>`
+  if(el){document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));el.classList.add('active')}
+  if(name==='pending-reports')renderPendingTable('all')
+  if(name==='confirm-pending')renderConfirmTable()
+  if(name==='appointments')renderAllApt('all')
+  if(name==='recon')renderReconTable()
+  if(name==='contract')renderContractPkg()
+  if(name==='invoices')renderPayoutTable()
+  if(name==='quality'){renderQsSlaMetrics();setTimeout(()=>drawChart('qs-chart','qs-labels',[70,75,87,78,80,82,82],['Nov','Dec','Jan','Feb','Mar','Apr'],false),100)}
+  if(name==='tat'){renderTatBreach();setTimeout(()=>drawTatChart(),100)}
+  setTimeout(()=>drawDashChart(),100)
+}
+
+function switchTab(cid,el){
+  const c=document.getElementById(cid)
+  if(c)c.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'))
+  el.classList.add('on')
+}
+
+// ══════════════════════════════════════
+//  MODALS
+// ══════════════════════════════════════
+function openMod(id){document.getElementById(id)?.classList.add('open')}
+function closeMod(id){document.getElementById(id)?.classList.remove('open')}
+
+function openConfirmModal(id,patient,test,slot){
+  currentConfirmId=id
+  document.getElementById('cam-sub').textContent=`${patient} · ${id}`
+  document.getElementById('cam-body').innerHTML=`
+    <div style="background:var(--s2);border-radius:var(--r8);padding:13px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--bord2)"><span style="color:var(--muted)">Patient</span><span style="font-weight:700">${patient}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--bord2)"><span style="color:var(--muted)">Package</span><span style="font-weight:700">${test}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--bord2)"><span style="color:var(--muted)">Slot</span><span style="font-weight:700">${slot||'08:00 AM'} — 21 Apr 2026</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--bord2)"><span style="color:var(--muted)">Type</span><span style="font-weight:700">In Clinic</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0"><span style="color:var(--muted)">SLA time left</span><span style="font-weight:700;color:var(--amber)">47 minutes</span></div>
+    </div>
+    <div class="alert alert-g"><span>By confirming, the patient can see this appointment confirmed. Provider is agreeing to accept the patient on the given slot with the above package details.</span></div>`
+  openMod('conf-apt-modal')
+}
+
+async function doConfirm(){
+  closeMod('conf-apt-modal')
+  if(currentConfirmId){
+    const { error } = await SB.from('bookings').update({stage:'Confirmed',confirmed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',currentConfirmId)
+    if(error){toast('e','Failed: '+error.message);return}
+  }
+  await loadData(); renderConfirmTable(); renderAllApt('all'); renderDashReports()
+  toast('s','✓ Appointment confirmed! Patient notified via WhatsApp.')
+}
+
+function openRejectModal(id,patient){
+  currentRejectId=id
+  document.getElementById('rm-sub').textContent=`${patient} · ${id}`
+  openMod('rej-modal')
+}
+
+async function doReject(){
+  const reason=document.getElementById('rej-reason')?.value
+  if(!reason){toast('e','Please select a rejection reason');return}
+  closeMod('rej-modal')
+  if(currentRejectId){
+    const { error } = await SB.from('bookings').update({stage:'Rejected',rejection_reason:reason,updated_at:new Date().toISOString()}).eq('id',currentRejectId)
+    if(error){toast('e','Failed: '+error.message);return}
+  }
+  await loadData(); renderAllApt('all'); renderConfirmTable(); renderDashReports()
+  toast('e',`Appointment rejected: "${reason}". Patient notified. Refund initiated.`)
+}
+
+// ══════════════════════════════════════
+//  UPLOAD PANEL
+// ══════════════════════════════════════
+const TESTS_LIST=['CBC (Complete Blood Count)','Lipid Profile','Thyroid Panel (T3/T4/TSH)','Vitamin D (25-OH)','HbA1c','Liver Function Test','Kidney Function Test','Chest X-Ray','ECG','Urine Routine Examination']
+let testStatuses={}
+let uploadAptId=null,uploadPatient=null,uploadTest=null
+
+function openUploadPanel(id,patient,test){
+  uploadAptId=id;uploadPatient=patient;uploadTest=test
+  testStatuses={}
+  document.getElementById('up-title').textContent=patient?`Upload Report — ${patient}`:'Upload Report'
+  document.getElementById('up-sub').textContent=id||'Select appointment'
+  document.getElementById('up-body').innerHTML=`
+    <div style="background:var(--s2);border-radius:var(--r8);padding:12px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">Apt ID</span><span style="font-weight:700;font-family:monospace;color:var(--teal-d)">${id||'—'}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--muted)">Patient</span><span style="font-weight:700">${patient||'—'}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Package</span><span style="font-weight:700">${(test||'').split('(')[0]}</span></div>
+    </div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px">Test-wise Status</div>
+    <div id="test-list" style="display:flex;flex-direction:column;gap:7px">
+      ${TESTS_LIST.slice(0,8).map((t,i)=>`<div id="test-row-${i}" style="border:1px solid var(--border);border-radius:var(--r8);padding:10px 12px;background:#fff">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
+          <span style="font-size:13px;font-weight:500">${t}</span>
+          <span class="badge ba" id="ts-badge-${i}">Pending</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="abt c" onclick="setTestSt(${i},'done','${t}')">✓ Done</button>
+          <button class="abt r" onclick="openSkipModal('${t}',${i})">✕ Skip</button>
+          <button class="abt" onclick="openNdModal('${t}',${i})">Not Done</button>
+        </div>
+      </div>`).join('')}
+    </div>
+    <div style="margin-top:16px">
+      <div class="tgl-row">
+        <div class="tgl-info"><h4>Hard Copies Collected</h4><p>Physical reports received from patient</p></div>
+        <button class="tgl" id="hard-copies-tgl" onclick="this.classList.toggle('on')"></button>
+      </div>
+    </div>
+    <div style="margin-top:16px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">Upload PDF Report</div>
+      <div class="fgrp"><label>Report Type</label>
+        <select id="report-type-sel">
+          <option>First Report (first upload for this appointment)</option>
+          <option>Partial Report (some tests done)</option>
+          <option>Final Report (all tests complete)</option>
+        </select>
+      </div>
+      <div style="border:2px dashed var(--border);border-radius:var(--r10);padding:24px;text-align:center;cursor:pointer;margin-bottom:12px" id="drop-zone" 
+           onclick="toast('i','File picker opened')"
+           ondragover="this.style.borderColor='var(--teal)';event.preventDefault()"
+           ondragleave="this.style.borderColor=''"
+           ondrop="event.preventDefault();handleDrop(event)">
+        <div style="font-size:28px;margin-bottom:8px">📄</div>
+        <div style="font-size:13px;font-weight:600;color:var(--slate)">Drop PDF here or click to upload</div>
+        <div style="font-size:11px;color:var(--hint);margin-top:3px">PDF only · Max 20MB</div>
+        <div id="file-name" style="font-size:12px;color:var(--teal);margin-top:6px;font-weight:600"></div>
+      </div>
+      <div class="fgrp"><label>Password (if any)</label><input placeholder="Leave blank if unprotected"></div>
+      <div class="alert alert-b"><span>💡 <strong>Note:</strong> After upload, AI will automatically scrape and match test values. Your team will validate before patient can view.</span></div>
+    </div>`
+  document.getElementById('upload-panel').classList.add('open')
+  document.getElementById('panel-ov').style.display='block'
+}
+
+function closeUploadPanel(){
+  document.getElementById('upload-panel').classList.remove('open')
+  document.getElementById('panel-ov').style.display='none'
+}
+
+function handleDrop(e){
+  const f=e.dataTransfer.files[0]
+  if(f){document.getElementById('file-name').textContent='📎 '+f.name}
+}
+
+function setTestSt(i,status,name){
+  testStatuses[i]=status
+  const badge=document.getElementById('ts-badge-'+i)
+  const row=document.getElementById('test-row-'+i)
+  if(badge){
+    badge.className=`badge ${status==='done'?'bg':status==='skip'?'ba':'br'}`
+    badge.textContent=status==='done'?'Done':status==='skip'?'Skipped':'Not Done'
+  }
+  if(row){
+    row.style.background=status==='done'?'var(--greenbg)':status==='skip'?'var(--amberbg)':'var(--redbg)'
+    row.style.borderColor=status==='done'?'var(--greenbord)':status==='skip'?'var(--amberbord)':'var(--redbord)'
+  }
+}
+
+function openSkipModal(test,idx){
+  currentSkipTest={test,idx}
+  document.getElementById('skip-test-name').textContent=test
+  openMod('skip-modal')
+}
+function confirmSkip(){
+  closeMod('skip-modal')
+  setTestSt(currentSkipTest.idx,'skip',currentSkipTest.test)
+  toast('w',`"${currentSkipTest.test}" marked as skipped. Consent email sent to ${uploadPatient||'patient'}.`)
+}
+
+function openNdModal(test,idx){
+  currentNdTest={test,idx}
+  document.getElementById('nd-test-name').textContent=test
+  openMod('nd-modal')
+}
+function confirmNotDone(){
+  closeMod('nd-modal')
+  setTestSt(currentNdTest.idx,'nd',currentNdTest.test)
+  toast('e',`"${currentNdTest.test}" marked as Not Done. Patient notified via email.`)
+}
+
+async function submitUpload(){
+  const doneCount=Object.values(testStatuses).filter(s=>s==='done').length
+  const skipCount=Object.values(testStatuses).filter(s=>s==='skip').length
+  const ndCount=Object.values(testStatuses).filter(s=>s==='nd').length
+  if(uploadAptId){
+    const now=new Date().toISOString()
+    // write each marked test to test_results
+    const recs=Object.keys(testStatuses).map(i=>({
+      booking_id:uploadAptId, test_name:TESTS_LIST[i],
+      lab_status: testStatuses[i]==='done'?'pending':(testStatuses[i]==='skip'?'skipped':'not_done'),
+      lab_marked_at:now, updated_at:now
+    }))
+    if(recs.length){ await SB.from('test_results').upsert(recs,{onConflict:'booking_id,test_name'}) }
+    const newStage = (skipCount===0 && ndCount===0) ? 'Report Uploaded' : 'Partially Uploaded'
+    await SB.from('bookings').update({stage:newStage,updated_at:now}).eq('id',uploadAptId)
+  }
+  closeUploadPanel()
+  await loadData(); renderDashReports(); renderPendingTable('all'); renderAllApt('all')
+  toast('s',`Report uploaded! ${doneCount} done, ${skipCount} skipped, ${ndCount} not done. Sent for validation.`)
+}
+
+// ══════════════════════════════════════
+//  SETTINGS TABS
+// ══════════════════════════════════════
+function switchSetTab(key){
+  ['general','sla','notif','logo','hours'].forEach(k=>{
+    const el=document.getElementById('set-'+k)
+    const tab=document.getElementById('set-tab-'+k)
+    if(el)el.style.display=k===key?'':'none'
+    if(tab)tab.classList.toggle('on',k===key)
+  })
+}
+
+// ══════════════════════════════════════
+//  CHARTS
+// ══════════════════════════════════════
+function drawDashChart(){
+  const c=document.getElementById('dash-chart'),l=document.getElementById('dash-labels')
+  if(!c||!l)return
+  const v=[12000,18000,15000,21000,26000,17000,22000],labels=['M','T','W','T','F','S','S']
+  const max=Math.max(...v),h=c.offsetHeight||80
+  c.innerHTML=v.map((val,i)=>`<div class="cbar" style="height:${Math.max(3,Math.round(val/max*(h-8)))}px;background:${i===v.length-1?'var(--teal)':'#E2E8F0'}" title="₹${val.toLocaleString('en-IN')}"></div>`).join('')
+  l.innerHTML=labels.map(lb=>`<div class="clbl">${lb}</div>`).join('')
+}
+
+function drawChart(barId,labId,vals,labels,color=true){
+  const c=document.getElementById(barId),l=document.getElementById(labId)
+  if(!c||!l)return
+  const max=Math.max(...vals)||1,h=c.offsetHeight||80
+  c.innerHTML=vals.map((v,i)=>`<div class="cbar" style="height:${Math.max(3,Math.round(v/max*(h-8)))}px;background:${color?(i===vals.length-1?'var(--teal)':'#E2E8F0'):'var(--teal)'}" title="${v}"></div>`).join('')
+  l.innerHTML=labels.map(lb=>`<div class="clbl">${lb}</div>`).join('')
+}
+
+function drawTatChart(){
+  const c=document.getElementById('tat-chart'),l=document.getElementById('tat-labels')
+  if(!c||!l)return
+  const sla=[96,92,88,95,78,97,94],labels=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+  const h=c.offsetHeight||100
+  c.innerHTML=sla.map((v,i)=>`<div class="cbar" style="height:${Math.max(3,Math.round(v/100*(h-8)))}px;background:${v>=90?'#10B981':'#EF4444'}" title="${v}% SLA compliance"></div>`).join('')
+  l.innerHTML=labels.map(lb=>`<div class="clbl">${lb}</div>`).join('')
+}
+
+function uploadLogo(){
+  toast('i','Opening file picker...')
+  document.getElementById('logo-preview').textContent='🔄'
+  setTimeout(()=>{document.getElementById('logo-preview').textContent='✅';toast('s','Logo uploaded!')},1500)
+}
+
+function exportCSV(){
+  toast('s','CSV exported successfully!')
+}
+function printInvoice(){
+  toast('s','Invoice PDF generated!')
+  setTimeout(()=>window.print(),500)
+}
+
+// ══════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════
+function toast(type,msg){
+  const c=document.getElementById('toasts')
+  const t=document.createElement('div');t.className=`toast ${type}`
+  const ic={s:'✓',e:'✕',i:'ℹ',w:'⚠'}
+  t.innerHTML=`<span style="font-size:15px;flex-shrink:0">${ic[type]||'ℹ'}</span><span style="flex:1">${msg}</span>`
+  c.appendChild(t)
+  setTimeout(()=>{t.style.transform='translateX(120%)';t.style.opacity='0';setTimeout(()=>t.remove(),300)},3800)
+}
+
+// ══════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════
+function renderAll(){
+  renderDashReports(); renderConfirmTable(); renderPendingTable('all'); renderAllApt('all')
+  renderReconTable(); renderContractPkg(); renderPayoutTable(); renderQsSlaMetrics()
+  switchSetTab('general'); setTimeout(drawDashChart,150)
+}
+async function boot(){
+  await loadData(); renderAll()
+  // realtime: refresh on any booking change
+  SB.channel('pd-live')
+    .on('postgres_changes',{event:'*',schema:'public',table:'bookings'}, async ()=>{ await loadData(); renderAll(); if(document.getElementById('p-confirm-pending').classList.contains('show'))renderConfirmTable() })
+    .subscribe()
+  // new-booking toast
+  SB.channel('pd-new').on('postgres_changes',{event:'INSERT',schema:'public',table:'bookings'},p=>{
+    toast('i','New booking: '+(p.new.patient_name||'patient')+' — Confirm within 2hrs')
+  }).subscribe()
+}
+async function doLogin(){
+  const em=document.getElementById('lg-email').value.trim()
+  const pw=document.getElementById('lg-pass').value
+  const btn=document.getElementById('lg-btn'); btn.disabled=true; btn.textContent='Signing in…'
+  const { data, error } = await SB.auth.signInWithPassword({email:em,password:pw})
+  if(error){ document.getElementById('lg-err').textContent=error.message; btn.disabled=false; btn.textContent='Sign in to Provider Portal →'; return }
+  SESSION=data.session; document.getElementById('login-gate').style.display='none'; boot()
+}
+async function doLogout(){ await SB.auth.signOut(); location.reload() }
+document.addEventListener('DOMContentLoaded',async ()=>{
+  const { data } = await SB.auth.getSession()
+  if(data && data.session){ SESSION=data.session; document.getElementById('login-gate').style.display='none'; boot() }
+  else { document.getElementById('login-gate').style.display='flex' }
+})
+</script>
+</body>
+</html>
