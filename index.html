@@ -434,6 +434,7 @@ tbody tr:hover td{background:#FAFBFC}
         <button data-pt="providers" onclick="partnerSwitch('providers',this)">Provider Network</button>
         <button data-pt="mapping" onclick="partnerSwitch('mapping',this)">Package Mapping Engine</button>
         <button data-pt="facility" onclick="partnerSwitch('facility',this)">Facility Matrix</button>
+        <button data-pt="match" onclick="partnerSwitch('match',this)">⚡ Match Engine</button>
       </div>
 
       <div class="subpane show" id="pt-enterprises">
@@ -465,6 +466,31 @@ tbody tr:hover td{background:#FAFBFC}
         <div class="card">
           <div class="card-head"><span class="card-title">Provider → Package Offerings</span><span style="font-size:11px;color:var(--hint)">which labs can fulfil which packages, at what cost</span></div>
           <div class="tw"><table><thead><tr><th>Provider</th><th>Package</th><th>Provider Cost</th><th>MRP</th><th>Status</th></tr></thead><tbody id="labpkg-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <div class="subpane" id="pt-match">
+        <div class="card">
+          <div class="card-head"><span class="card-title">Provider Match Engine</span><span style="font-size:11px;color:var(--hint)">capability 35% · distance 25% · SLA 15% · margin 15% · rating 10%</span></div>
+          <div class="fbar">
+            <select id="me-pkg" style="min-width:220px"></select>
+            <select id="me-loc">
+              <option value="17.4401,78.3489">Gachibowli, Hyderabad</option>
+              <option value="17.4326,78.4071">Jubilee Hills, Hyderabad</option>
+              <option value="17.3850,78.4867">Hyderabad Central</option>
+              <option value="17.4933,78.3915">Kukatpally, Hyderabad</option>
+              <option value="12.9716,77.5946">MG Road, Bangalore</option>
+              <option value="12.9352,77.6245">Koramangala, Bangalore</option>
+            </select>
+            <button class="btn sm primary" onclick="runMatch()">⚡ Rank Providers</button>
+            <span id="me-status" style="font-size:12px;color:var(--hint);margin-left:auto"></span>
+          </div>
+          <div class="alert alert-b" style="margin:12px 14px"><span>Fully automated ranking — no manual mapping. The engine scores every active provider against the package's required tests (facility matrix), customer distance, TAT, margin and rating. Server-side in Postgres.</span></div>
+          <div class="tw"><table>
+            <thead><tr><th>#</th><th>Provider</th><th>Distance</th><th>Test Coverage</th><th>TAT</th><th>Margin</th><th>Rating</th><th>Score</th></tr></thead>
+            <tbody id="me-table"><tr><td colspan="8" class="empty">Pick a package and location, then run the engine.</td></tr></tbody>
+          </table></div>
+          <div id="me-workorder" style="display:none;margin:0 14px 14px;padding:13px 15px;background:var(--teal-l);border:1px solid var(--greenbord);border-radius:10px;font-size:13px"></div>
         </div>
       </div>
 
@@ -1042,6 +1068,37 @@ function renderPartner(){
   if(fl&&fl.options.length===0){LABS.forEach(l=>fl.add(new Option(l.branch_name||l.name,l.id)));curFacLab=LABS[0]&&LABS[0].id;}
   renderFacility();
   partnerSwitch(partnerTab);
+  const mp=document.getElementById('me-pkg');
+  if(mp&&mp.options.length===0){PACKAGES.forEach(p=>mp.add(new Option(p.name,p.id)))}
+}
+async function runMatch(){
+  const pkgId=document.getElementById('me-pkg').value;
+  const [lat,lng]=document.getElementById('me-loc').value.split(',').map(Number);
+  const st=document.getElementById('me-status');st.textContent='Ranking…';
+  const {data,error}=await SB.rpc('match_providers',{p_package_id:pkgId,p_lat:lat,p_lng:lng});
+  if(error){st.textContent='';return toast('e',error.message)}
+  const rows=data||[];st.textContent=rows.length+' providers scored';
+  document.getElementById('me-table').innerHTML=rows.length?rows.map((r,i)=>{
+    const cov=r.tests_required>0?Math.round(r.capability_pct*100):100;
+    const sc=Math.round(r.final_score*100);
+    return `<tr style="${i===0?'background:var(--teal-l)':''}">
+      <td style="font-weight:800">${i+1}${i===0?' <span class="badge bt">RECOMMENDED</span>':''}</td>
+      <td style="font-weight:600">${esc(r.branch_name||r.lab_name)}<div style="font-size:11px;color:var(--hint)">${esc(r.city||'')}${r.home_collection?' · 🏠 home collection':''}</div></td>
+      <td>${r.distance_km!=null?r.distance_km+' km':'—'}</td>
+      <td><div style="display:flex;align-items:center;gap:7px"><div class="pbar" style="width:70px"><div class="pfill" style="width:${cov}%;background:${cov===100?'var(--teal)':cov>=60?'#F59E0B':'#EF4444'}"></div></div><span style="font-size:11px;font-weight:700">${r.tests_covered}/${r.tests_required}</span></div></td>
+      <td>${r.sla_hours?r.sla_hours+'h':'—'}</td>
+      <td>${Math.round((r.margin_pct||0)*100)}%</td>
+      <td>⭐ ${r.rating||'—'}</td>
+      <td><div style="display:flex;align-items:center;gap:7px"><div class="pbar" style="width:60px"><div class="pfill" style="width:${sc}%;background:var(--teal)"></div></div><span style="font-weight:800;color:var(--teal-d)">${r.final_score}</span></div></td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="8" class="empty">No active providers</td></tr>';
+  // human-readable work order for the top pick
+  const wo=document.getElementById('me-workorder');
+  if(rows.length){
+    const t=rows[0];const pkg=PACKAGES.find(p=>p.id===pkgId);
+    wo.style.display='block';
+    wo.innerHTML=`<b>📋 Work Order (auto-generated):</b> Assign <b>${esc(pkg?pkg.name:'package')}</b> to <b>${esc(t.branch_name||t.lab_name)}</b>, ${esc(t.city||'')} — ${t.distance_km!=null?t.distance_km+' km from customer':'distance n/a'}, covers ${t.tests_covered}/${t.tests_required} required tests, TAT ${t.sla_hours||'—'}h, margin ${Math.round((t.margin_pct||0)*100)}%, score <b>${t.final_score}</b>.`;
+  } else wo.style.display='none';
 }
 function openEnterprise(id){
   curEnt=id;const e=ENTS.find(x=>x.id===id);if(!e)return;
