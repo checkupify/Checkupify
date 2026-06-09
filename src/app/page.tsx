@@ -93,7 +93,7 @@ export default function App() {
     <div style={{ minHeight: "100svh", maxWidth: "480px", margin: "0 auto", background: "white", position: "relative" }}>
       {screen === "home" && <Home user={user} pkgs={pkgs} bookings={bookings} loading={loading} onNav={go} onRefresh={() => loadData()} />}
       {screen === "packages" && <Packages pkgs={pkgs} onSelect={p => { setSelPkg(p); go("lab"); }} onBack={() => go("home")} />}
-      {screen === "lab" && selPkg && <SelectLab pkg={selPkg} labs={labs} onSelect={l => { setSelLab(l); go("slot"); }} onBack={() => go("packages")} />}
+      {screen === "lab" && selPkg && <SelectLab pkg={selPkg} labs={labs} user={user} onSelect={l => { setSelLab(l); go("slot"); }} onBack={() => go("packages")} />}
       {screen === "slot" && selPkg && selLab && <SelectSlot pkg={selPkg} lab={selLab} onSelect={(d, s, t) => { setSelDate(d); setSelSlot(s); setSelType(t); go("confirm"); }} onBack={() => go("lab")} />}
       {screen === "confirm" && selPkg && selLab && <Confirm pkg={selPkg} lab={selLab} date={selDate} slot={selSlot} type={selType} user={user} onSuccess={id => { setDoneId(id); loadData(); go("success"); }} onBack={() => go("slot")} />}
       {screen === "success" && <Success id={doneId} onHome={() => { loadData(); go("home"); }} />}
@@ -524,23 +524,44 @@ function Packages({ pkgs, onSelect, onBack }: { pkgs: Pkg[]; onSelect: (p: Pkg) 
 }
 
 // ─── Select Lab ───────────────────────────────────────────────────────────────
-function SelectLab({ pkg, labs, onSelect, onBack }: { pkg: Pkg; labs: Lab[]; onSelect: (l: Lab) => void; onBack: () => void }) {
+const CITY_COORDS: Record<string, [number, number]> = {
+  hyderabad: [17.3850, 78.4867], bangalore: [12.9716, 77.5946], bengaluru: [12.9716, 77.5946],
+  mumbai: [19.0760, 72.8777], delhi: [28.6139, 77.2090], chennai: [13.0827, 80.2707], pune: [18.5204, 73.8567],
+};
+type MatchRow = { lab_id: string; distance_km: number | null; final_score: number; capability_pct: number };
+function SelectLab({ pkg, labs, user, onSelect, onBack }: { pkg: Pkg; labs: Lab[]; user: User; onSelect: (l: Lab) => void; onBack: () => void }) {
+  const [match, setMatch] = useState<Record<string, MatchRow>>({});
+  useEffect(() => {
+    const [lat, lng] = CITY_COORDS[(user.city || "").trim().toLowerCase()] ?? CITY_COORDS.hyderabad;
+    supabase.rpc("match_providers", { p_package_id: pkg.id, p_lat: lat, p_lng: lng })
+      .then(({ data }) => {
+        if (!data) return;
+        const m: Record<string, MatchRow> = {};
+        (data as MatchRow[]).forEach(r => { m[r.lab_id] = r; });
+        setMatch(m);
+      });
+  }, [pkg.id, user.city]);
+  const ranked = [...labs].sort((a, b) => (match[b.id]?.final_score ?? 0) - (match[a.id]?.final_score ?? 0));
+  const bestId = ranked.length && match[ranked[0].id] ? ranked[0].id : null;
   return (
     <div style={{ minHeight: "100svh", background: "#F0F4F8" }}>
       <div style={{ background: navyGrad, padding: "52px 20px 24px" }}>
         <BackHeader title="Select Lab" subtitle={pkg.name} onBack={onBack} white />
         <div style={{ background: "rgba(255,255,255,.08)", borderRadius: 12, padding: "10px 14px" }}>
-          <p style={{ fontSize: 12, color: "rgba(255,255,255,.5)", fontWeight: 600 }}>💡 All labs are NABL certified and quality verified</p>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,.5)", fontWeight: 600 }}>⚡ Ranked for you — by distance, test coverage & turnaround time</p>
         </div>
       </div>
       <div style={{ padding: "16px 16px 32px", display: "flex", flexDirection: "column", gap: 12 }}>
-        {labs.map(l => (
+        {ranked.map(l => (
           <button key={l.id} onClick={() => onSelect(l)}
             style={{ background: "white", borderRadius: 20, border: "1px solid #E2E8F0", boxShadow: "0 2px 10px rgba(11,37,69,.07)", padding: 18, textAlign: "left", cursor: "pointer", width: "100%", fontFamily: "inherit" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
               <div style={{ flex: 1, marginRight: 12 }}>
-                <p style={{ fontSize: 16, fontWeight: 800, color: N, marginBottom: 4 }}>{l.name}</p>
-                <p style={{ fontSize: 13, color: "#7A90B3" }}>{l.address ?? l.city}</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+                  <p style={{ fontSize: 16, fontWeight: 800, color: N }}>{l.name}</p>
+                  {l.id === bestId && <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 99, background: "#F0FDF4", color: "#15803D", border: "1px solid #BBF7D0" }}>⚡ BEST MATCH</span>}
+                </div>
+                <p style={{ fontSize: 13, color: "#7A90B3" }}>{l.address ?? l.city}{match[l.id]?.distance_km != null ? ` · ${match[l.id].distance_km} km away` : ""}</p>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
                 <p style={{ fontSize: 22, fontWeight: 900, color: "#F59E0B" }}>★ {l.rating}</p>
