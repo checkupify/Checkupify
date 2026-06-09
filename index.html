@@ -1033,12 +1033,12 @@ async function loadData(){
   }))
 
   // PKG_DATA from packages
-  const { data:pk } = await SB.from('packages').select('id,name,slug,price,test_count').limit(50)
+  const { data:pk } = await SB.from('packages').select('id,name,slug,base_price,mrp,test_count').order('sort_order').limit(50)
   PKG_DATA = (pk||[]).map(p=>{
-    const price=p.price||0
+    const price=p.base_price||0
     return { name:p.name, code:(p.slug||'PKG').toUpperCase().slice(0,14),
              mask:'HFL-'+(p.slug||'pkg').slice(0,6).toUpperCase(),
-             mrp:Math.round(price*1.6), price, share:Math.round(price*0.89) }
+             mrp:p.mrp||Math.round(price*1.6), price, share:Math.round(price*0.89) }
   })
 
   setLiveNumbers(rows)
