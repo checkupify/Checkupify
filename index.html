@@ -166,6 +166,36 @@ tbody tr:hover td{background:#FAFBFC}
 /* LOGIN */
 #login-gate{display:none;position:fixed;inset:0;z-index:2000;background:linear-gradient(155deg,#0B2545,#1B4B8A);align-items:center;justify-content:center}
 .lg-card{background:#fff;border-radius:18px;padding:36px 34px;width:100%;max-width:400px;box-shadow:0 30px 70px rgba(0,0,0,.35)}
+
+/* ── v2 additions: filter bar, drawer, profile, mapping ── */
+.fbar{display:flex;gap:8px;flex-wrap:wrap;padding:11px 14px;border-bottom:1px solid var(--border);align-items:center;background:var(--s2)}
+.fbar input,.fbar select{padding:7px 10px;border:1px solid var(--border);border-radius:var(--r8);font-size:12px;font-family:inherit;color:var(--ink);background:#fff;outline:none;transition:.1s}
+.fbar input:focus,.fbar select:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,204,142,.1)}
+.fbar .fb-search{flex:1;min-width:190px}
+.fbar label{font-size:10px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:.4px}
+.clickrow{cursor:pointer}
+.drawer-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:1100}
+.drawer-ov.open{display:block}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:460px;max-width:93vw;background:#fff;box-shadow:-14px 0 44px rgba(0,0,0,.17);z-index:1101;transform:translateX(100%);transition:transform .22s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+.drawer.open{transform:translateX(0)}
+.drawer-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.drawer-body{flex:1;overflow-y:auto;padding:18px 20px}
+.drawer-body::-webkit-scrollbar{width:6px}.drawer-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:8px 12px;font-size:13px;margin-bottom:6px}
+.kv .k{color:var(--muted);font-weight:600}
+.kv .v{color:var(--ink);font-weight:500;word-break:break-word}
+.sect-h{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:18px 0 9px;display:flex;align-items:center;gap:7px}
+.sect-h::after{content:'';flex:1;height:1px;background:var(--bord2)}
+.seg{display:flex;gap:4px;background:var(--bord2);padding:4px;border-radius:10px;flex-wrap:wrap;margin-bottom:4px}
+.seg button{flex:1;min-width:120px;padding:8px 12px;border:none;background:none;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--muted);font-family:inherit;transition:.1s}
+.seg button.on{background:#fff;color:var(--teal-d);box-shadow:0 1px 3px rgba(0,0,0,.09)}
+.toggle{width:40px;height:23px;border-radius:12px;background:var(--border);position:relative;cursor:pointer;transition:.15s;flex-shrink:0;display:inline-block;vertical-align:middle}
+.toggle.on{background:var(--teal)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:#fff;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.toggle.on::after{left:19px}
+.subpane{display:none}.subpane.show{display:block}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;background:var(--teal-l);color:var(--teal-d);font-size:12px;font-weight:600;margin:0 6px 6px 0}
+.mini-card{border:1px solid var(--border);border-radius:var(--r10);padding:12px 14px;margin-bottom:9px}
 </style>
 </head>
 <body>
@@ -297,6 +327,16 @@ tbody tr:hover td{background:#FAFBFC}
         <button class="btn sm" onclick="loadAll().then(()=>{renderAppointments(curAptFilter);toast('s','Refreshed')})">↻ Refresh</button>
       </div>
       <div class="card">
+        <div class="fbar">
+          <input id="af-q" class="fb-search" placeholder="Search apt ID, patient, phone, package…" oninput="renderAppointments(curAptFilter)">
+          <select id="af-type" onchange="renderAppointments(curAptFilter)"><option value="">All types</option><option>Home Collection</option><option>In Clinic</option></select>
+          <select id="af-lab" onchange="renderAppointments(curAptFilter)"><option value="">All labs</option></select>
+          <select id="af-pkg" onchange="renderAppointments(curAptFilter)"><option value="">All packages</option></select>
+          <span style="display:flex;align-items:center;gap:5px"><label>From</label><input id="af-from" type="date" onchange="renderAppointments(curAptFilter)"></span>
+          <span style="display:flex;align-items:center;gap:5px"><label>To</label><input id="af-to" type="date" onchange="renderAppointments(curAptFilter)"></span>
+          <button class="btn sm" onclick="clearAptFilters()">Clear</button>
+          <span id="apt-result-count" style="font-size:12px;color:var(--hint);margin-left:auto;font-weight:600"></span>
+        </div>
         <div class="tabs" id="apt-tabs">
           <div class="tab on" data-f="all" onclick="setAptFilter('all',this)">All <span class="tcnt" id="ac-all">0</span></div>
           <div class="tab" data-f="New" onclick="setAptFilter('New',this)">New <span class="tcnt" id="ac-New">0</span></div>
@@ -307,7 +347,7 @@ tbody tr:hover td{background:#FAFBFC}
           <div class="tab" data-f="Rejected" onclick="setAptFilter('Rejected',this)">Rejected <span class="tcnt" id="ac-Rej">0</span></div>
         </div>
         <div class="tw"><table>
-          <thead><tr><th>Apt ID</th><th>Patient</th><th>Package</th><th>Date / Slot</th><th>Type</th><th>Amount</th><th>Stage</th><th style="text-align:right">Actions</th></tr></thead>
+          <thead><tr><th>Apt ID</th><th>Patient</th><th>Contact</th><th>Package</th><th>Lab / Branch</th><th>Date / Slot</th><th>Type</th><th>Amount</th><th>Stage</th><th style="text-align:right">Actions</th></tr></thead>
           <tbody id="apt-table"></tbody>
         </table></div>
       </div>
@@ -331,14 +371,20 @@ tbody tr:hover td{background:#FAFBFC}
 
     <!-- CUSTOMERS -->
     <div class="page" id="p-customers">
-      <div class="phead"><div><div class="ptitle">Customers (CRM)</div><div class="psub">Employee / customer 360 — details, bookings and report history</div></div></div>
+      <div class="phead"><div><div class="ptitle">Customers (CRM)</div><div class="psub">Fetch any customer by name, company, masking ID, phone, email or appointment ID</div></div></div>
+      <div class="card">
+        <div class="fbar">
+          <input id="cust-q" class="fb-search" placeholder="🔍  Search by name, company, masking ID, phone, email, or appointment ID…" oninput="renderCustomers()" style="min-width:320px">
+          <span id="cust-result" style="font-size:12px;color:var(--hint);margin-left:auto;font-weight:600"></span>
+        </div>
+      </div>
       <div class="g21">
         <div class="card" style="align-self:start">
-          <div class="card-head"><span class="card-title">All Customers</span><span class="badge bt" id="cust-count">0</span></div>
-          <div class="tw"><table><thead><tr><th>Name</th><th>Phone</th><th>City</th><th>Bookings</th></tr></thead><tbody id="cust-table"></tbody></table></div>
+          <div class="card-head"><span class="card-title">Customers</span><span class="badge bt" id="cust-count">0</span></div>
+          <div class="tw"><table><thead><tr><th>Name</th><th>Company</th><th>Phone</th><th>Bookings</th></tr></thead><tbody id="cust-table"></tbody></table></div>
         </div>
         <div class="card" style="align-self:start">
-          <div class="card-head"><span class="card-title">Customer 360</span></div>
+          <div class="card-head"><span class="card-title">Customer Profile · 360</span></div>
           <div class="empty" id="cust-detail">Select a customer to view their full profile.</div>
         </div>
       </div>
@@ -373,16 +419,63 @@ tbody tr:hover td{background:#FAFBFC}
 
     <!-- PARTNER SETUP -->
     <div class="page" id="p-partner">
-      <div class="phead"><div><div class="ptitle">Partner Setup (Network & Supply)</div><div class="psub">Diagnostic enterprises, branches/providers and facility coverage</div></div></div>
-      <div class="metrics m4">
-        <div class="mcard"><div class="mcard-top" style="background:var(--teal)"></div><div class="mlabel">Active Labs</div><div class="mval" id="ps-labs">—</div></div>
-        <div class="mcard"><div class="mcard-top" style="background:#10B981"></div><div class="mlabel">NABL Certified</div><div class="mval" id="ps-nabl" style="color:var(--green)">—</div></div>
-        <div class="mcard"><div class="mcard-top" style="background:#6366F1"></div><div class="mlabel">Home Collection</div><div class="mval" id="ps-home">—</div></div>
-        <div class="mcard"><div class="mcard-top" style="background:#F59E0B"></div><div class="mlabel">Avg Rating</div><div class="mval" id="ps-rating" style="color:var(--amber)">—</div></div>
+      <div class="phead">
+        <div><div class="ptitle">Partner Setup (Network & Supply)</div><div class="psub">Create enterprises, onboard providers, map packages and manage facility coverage</div></div>
+        <div style="display:flex;gap:8px"><button class="btn sm" onclick="openProvModal()">+ Add Provider</button><button class="btn sm primary" onclick="openEntModal()">+ New Enterprise</button></div>
       </div>
-      <div class="card">
-        <div class="card-head"><span class="card-title">Provider Network</span></div>
-        <div class="tw"><table><thead><tr><th>Lab / Branch</th><th>City</th><th>Certifications</th><th>Home Collection</th><th>TAT</th><th>Rating</th><th>Status</th></tr></thead><tbody id="labs-table"></tbody></table></div>
+      <div class="metrics m4">
+        <div class="mcard"><div class="mcard-top" style="background:var(--teal)"></div><div class="mlabel">Enterprises</div><div class="mval" id="ps-ents">—</div></div>
+        <div class="mcard"><div class="mcard-top" style="background:#10B981"></div><div class="mlabel">Providers / Branches</div><div class="mval" id="ps-labs" style="color:var(--green)">—</div></div>
+        <div class="mcard"><div class="mcard-top" style="background:#6366F1"></div><div class="mlabel">Company↔Package Maps</div><div class="mval" id="ps-maps">—</div></div>
+        <div class="mcard"><div class="mcard-top" style="background:#F59E0B"></div><div class="mlabel">NABL Certified</div><div class="mval" id="ps-nabl" style="color:var(--amber)">—</div></div>
+      </div>
+      <div class="seg">
+        <button class="on" data-pt="enterprises" onclick="partnerSwitch('enterprises',this)">Enterprises</button>
+        <button data-pt="providers" onclick="partnerSwitch('providers',this)">Provider Network</button>
+        <button data-pt="mapping" onclick="partnerSwitch('mapping',this)">Package Mapping Engine</button>
+        <button data-pt="facility" onclick="partnerSwitch('facility',this)">Facility Matrix</button>
+      </div>
+
+      <div class="subpane show" id="pt-enterprises">
+        <div class="g21">
+          <div class="card" style="align-self:start">
+            <div class="card-head"><span class="card-title">Enterprises</span><button class="btn sm primary" onclick="openEntModal()">+ New</button></div>
+            <div class="tw"><table><thead><tr><th>Enterprise</th><th>Type</th><th>Providers</th><th>Status</th></tr></thead><tbody id="ent-list"></tbody></table></div>
+          </div>
+          <div class="card" style="align-self:start">
+            <div class="card-head"><span class="card-title">Enterprise Detail</span></div>
+            <div class="empty" id="ent-detail">Select an enterprise to see its providers, facilities and mapped packages.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subpane" id="pt-providers">
+        <div class="card">
+          <div class="card-head"><span class="card-title">Provider Network</span><button class="btn sm primary" onclick="openProvModal()">+ Add Provider</button></div>
+          <div class="tw"><table><thead><tr><th>Lab / Branch</th><th>Enterprise</th><th>City</th><th>Certifications</th><th>Home Coll.</th><th>TAT</th><th>Rating</th><th>Status</th></tr></thead><tbody id="labs-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <div class="subpane" id="pt-mapping">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-head"><span class="card-title">Company → Package Mapping</span><button class="btn sm primary" onclick="openCpkgModal()">+ Map Package to Company</button></div>
+          <div class="alert alert-b" style="margin:12px 14px"><span>This is what an employee sees in the patient app: a package is bookable by a company's staff only if it's mapped here, at the negotiated employee price.</span></div>
+          <div class="tw"><table><thead><tr><th>Company</th><th>Package</th><th>Employee Price</th><th>Annual Limit</th><th>Status</th><th></th></tr></thead><tbody id="cpkg-table"></tbody></table></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Provider → Package Offerings</span><span style="font-size:11px;color:var(--hint)">which labs can fulfil which packages, at what cost</span></div>
+          <div class="tw"><table><thead><tr><th>Provider</th><th>Package</th><th>Provider Cost</th><th>MRP</th><th>Status</th></tr></thead><tbody id="labpkg-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <div class="subpane" id="pt-facility">
+        <div class="card">
+          <div class="card-head"><span class="card-title">Facility Matrix</span>
+            <select id="fac-lab" onchange="renderFacility()" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit"></select>
+          </div>
+          <div class="alert alert-a" style="margin:12px 14px"><span>Toggle which tests each provider can run. Turning a facility off here immediately removes it from that provider's bookable capability (disruption-ready).</span></div>
+          <div class="tw"><table><thead><tr><th>Test</th><th>Category</th><th>TAT</th><th style="text-align:right">Available</th></tr></thead><tbody id="fac-table"></tbody></table></div>
+        </div>
       </div>
     </div>
 
@@ -411,6 +504,17 @@ tbody tr:hover td{background:#FAFBFC}
 
   </div>
 </div>
+</div>
+
+<!-- SHARED DETAIL DRAWER -->
+<div class="drawer-ov" id="drawer-ov" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div><div class="mtitle" id="drawer-title">Detail</div><div style="font-size:12px;color:var(--hint);margin-top:2px" class="mono" id="drawer-sub"></div></div>
+    <button class="mclose" onclick="closeDrawer()">✕</button>
+  </div>
+  <div style="padding:10px 20px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap" id="drawer-actions"></div>
+  <div class="drawer-body" id="drawer-body"></div>
 </div>
 
 <!-- OVERRIDE MODAL -->
@@ -449,6 +553,78 @@ tbody tr:hover td{background:#FAFBFC}
   </div>
 </div>
 
+
+<!-- CREATE ENTERPRISE MODAL -->
+<div class="ov" id="ent-modal" onclick="if(event.target===this)closeMod('ent-modal')">
+  <div class="modal modal-md">
+    <div class="mhead"><div><div class="mtitle">New Enterprise</div><div style="font-size:12px;color:var(--hint);margin-top:3px">Create a corporate / diagnostic enterprise</div></div><button class="mclose" onclick="closeMod('ent-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="frow f2">
+        <div class="fgrp"><label>Enterprise name <span class="req">*</span></label><input id="en-name" placeholder="e.g. Apollo Diagnostics"></div>
+        <div class="fgrp"><label>Type</label><select id="en-type"><option>Corporate</option><option>Diagnostic Chain</option><option>Hospital</option><option>SME</option></select></div>
+      </div>
+      <div class="frow f2">
+        <div class="fgrp"><label>POC name</label><input id="en-poc" placeholder="Point of contact"></div>
+        <div class="fgrp"><label>POC phone</label><input id="en-phone" placeholder="+91…"></div>
+      </div>
+      <div class="fgrp"><label>POC email</label><input id="en-email" type="email" placeholder="poc@company.com"></div>
+      <div class="frow f2">
+        <div class="fgrp"><label>Contract start</label><input id="en-cs" type="date"></div>
+        <div class="fgrp"><label>Contract end</label><input id="en-ce" type="date"></div>
+      </div>
+      <div class="frow f2">
+        <div class="fgrp"><label>Discount %</label><input id="en-disc" type="number" placeholder="e.g. 15"></div>
+        <div class="fgrp"><label>Annual quota / employee</label><input id="en-quota" type="number" placeholder="e.g. 2"></div>
+      </div>
+      <div class="alert alert-b"><span>After creating, open the enterprise to add providers (branches), map packages and set facilities. MOU / PAN / cheque upload is a Phase-2 storage step.</span></div>
+    </div>
+    <div class="mfoot"><button class="btn" onclick="closeMod('ent-modal')">Cancel</button><button class="btn primary" onclick="createEnterprise()">Create Enterprise</button></div>
+  </div>
+</div>
+
+<!-- ADD PROVIDER MODAL -->
+<div class="ov" id="prov-modal" onclick="if(event.target===this)closeMod('prov-modal')">
+  <div class="modal modal-md">
+    <div class="mhead"><div><div class="mtitle">Add Provider / Branch</div><div style="font-size:12px;color:var(--hint);margin-top:3px">A diagnostic branch under an enterprise</div></div><button class="mclose" onclick="closeMod('prov-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="frow f2">
+        <div class="fgrp"><label>Provider name <span class="req">*</span></label><input id="pv-name" placeholder="e.g. Apollo Diagnostics"></div>
+        <div class="fgrp"><label>Branch label</label><input id="pv-branch" placeholder="e.g. Jubilee Hills"></div>
+      </div>
+      <div class="fgrp"><label>Enterprise</label><select id="pv-ent"></select></div>
+      <div class="frow f2">
+        <div class="fgrp"><label>City</label><input id="pv-city" placeholder="Hyderabad"></div>
+        <div class="fgrp"><label>Phone</label><input id="pv-phone" placeholder="+91…"></div>
+      </div>
+      <div class="fgrp"><label>Address</label><input id="pv-addr" placeholder="Full address"></div>
+      <div class="frow f2">
+        <div class="fgrp"><label>Avg TAT (hours)</label><input id="pv-tat" type="number" placeholder="e.g. 24"></div>
+        <div class="fgrp" style="display:flex;gap:18px;align-items:flex-end;padding-bottom:9px">
+          <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-weight:500;font-size:13px"><input type="checkbox" id="pv-nabl" style="width:auto"> NABL</label>
+          <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-weight:500;font-size:13px"><input type="checkbox" id="pv-home" style="width:auto"> Home collection</label>
+        </div>
+      </div>
+    </div>
+    <div class="mfoot"><button class="btn" onclick="closeMod('prov-modal')">Cancel</button><button class="btn primary" onclick="addProvider()">Add Provider</button></div>
+  </div>
+</div>
+
+<!-- MAP PACKAGE TO COMPANY MODAL -->
+<div class="ov" id="cpkg-modal" onclick="if(event.target===this)closeMod('cpkg-modal')">
+  <div class="modal modal-sm">
+    <div class="mhead"><div><div class="mtitle">Map Package → Company</div><div style="font-size:12px;color:var(--hint);margin-top:3px">Makes the package bookable by that company's employees</div></div><button class="mclose" onclick="closeMod('cpkg-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="fgrp"><label>Company <span class="req">*</span></label><select id="cp-ent"></select></div>
+      <div class="fgrp"><label>Package <span class="req">*</span></label><select id="cp-pkg" onchange="cpkgSync()"></select></div>
+      <div class="frow f2">
+        <div class="fgrp"><label>Employee price (₹)</label><input id="cp-price" type="number"></div>
+        <div class="fgrp"><label>Annual limit</label><input id="cp-limit" type="number" value="2"></div>
+      </div>
+    </div>
+    <div class="mfoot"><button class="btn" onclick="closeMod('cpkg-modal')">Cancel</button><button class="btn primary" onclick="mapCompanyPackage()">Map Package</button></div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SB=window.supabase.createClient('https://lguoussmsusadvmexjkb.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxndW91c3Ntc3VzYWR2bWV4amtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3Njc1OTcsImV4cCI6MjA5MDM0MzU5N30.Mq6nW2ItZqywuIbVeOUR9HQOglZOL5Wm0uSFwT6hfjw');
@@ -461,7 +637,12 @@ const DIG_STAGES=['Report Uploaded','Partially Uploaded','Under Verification'];
 
 // ── live data stores ──
 let BOOKINGS=[],USERS=[],LABS=[],PACKAGES=[],ENTS=[],LEADS=[],RESULTS=[],FEED=[];
+let CPKG=[],MASK=[],LABTESTS=[],LABPKG=[],EFAC=[],TESTS=[],AUDIT=[];
 let curAptFilter='all',curDig=null,curCust=null,ovrId=null,rejId=null;
+let partnerTab='enterprises',curEnt=null,curFacLab=null;
+// helpers for masking + company
+function maskFor(b){const m=MASK.find(x=>x.lab_id===b.lab_id&&x.package_id===b.package_id);return m?m.masking_code:null}
+function entName(id){const e=ENTS.find(x=>x.id===id);return e?e.name:null}
 
 const money=n=>'₹'+Math.round(n||0).toLocaleString('en-IN');
 const dmy=s=>{if(!s)return'—';const d=new Date(s);return isNaN(d)?'—':d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})};
@@ -470,19 +651,27 @@ const pkgName=b=>b._pkg||'Health Package';
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 async function loadAll(){
-  const [bk,us,lb,pk,en,ld,tr]=await Promise.all([
-    SB.from('bookings').select('*,package:packages(name),lab:labs(name,branch_name)').order('created_at',{ascending:false}).limit(800),
-    SB.from('users').select('*').order('created_at',{ascending:false}).limit(500),
-    SB.from('labs').select('*').limit(200),
+  const [bk,us,lb,pk,en,ld,tr,cp,mk,lt,lp,ef,ts,al]=await Promise.all([
+    SB.from('bookings').select('*,package:packages(name,slug),lab:labs(name,branch_name,city)').order('created_at',{ascending:false}).limit(1000),
+    SB.from('users').select('*,enterprise:enterprises(name)').order('created_at',{ascending:false}).limit(800),
+    SB.from('labs').select('*').limit(300),
     SB.from('packages').select('*').order('sort_order').limit(100),
-    SB.from('enterprises').select('*').limit(100),
+    SB.from('enterprises').select('*').order('created_at').limit(200),
     SB.from('leads').select('*').order('created_at',{ascending:false}).limit(200),
-    SB.from('test_results').select('*').limit(2000)
+    SB.from('test_results').select('*').limit(3000),
+    SB.from('company_packages').select('*').limit(500),
+    SB.from('masking_ids').select('*').limit(500),
+    SB.from('lab_tests').select('*').limit(3000),
+    SB.from('lab_packages').select('*').limit(1000),
+    SB.from('enterprise_facilities').select('*').limit(500),
+    SB.from('tests').select('id,name,category,base_price,tat_hours').order('name').limit(200)
   ]);
-  BOOKINGS=(bk.data||[]).map(b=>({...b,_pkg:b.package&&b.package.name,_lab:b.lab&&(b.lab.branch_name||b.lab.name)}));
-  USERS=us.data||[];LABS=lb.data||[];PACKAGES=pk.data||[];ENTS=en.data||[];LEADS=ld.data||[];RESULTS=tr.data||[];
-  const af=await SB.from('ops_audit_log').select('*').order('created_at',{ascending:false}).limit(15);
-  FEED=af.data||[];
+  BOOKINGS=(bk.data||[]).map(b=>({...b,_pkg:b.package&&b.package.name,_pslug:b.package&&b.package.slug,_lab:b.lab&&(b.lab.branch_name||b.lab.name),_labcity:b.lab&&b.lab.city}));
+  USERS=(us.data||[]).map(u=>({...u,_company:u.enterprise&&u.enterprise.name}));
+  LABS=lb.data||[];PACKAGES=pk.data||[];ENTS=en.data||[];LEADS=ld.data||[];RESULTS=tr.data||[];
+  CPKG=cp.data||[];MASK=mk.data||[];LABTESTS=lt.data||[];LABPKG=lp.data||[];EFAC=ef.data||[];TESTS=ts.data||[];
+  const af=await SB.from('ops_audit_log').select('*').order('created_at',{ascending:false}).limit(300);
+  AUDIT=af.data||[];FEED=AUDIT.slice(0,15);
 }
 
 // ════════ DASHBOARD ════════
@@ -526,24 +715,83 @@ function renderDashboard(){
 // ════════ APPOINTMENTS ════════
 function setAptFilter(f,el){curAptFilter=f;if(el){document.querySelectorAll('#apt-tabs .tab').forEach(t=>t.classList.remove('on'));el.classList.add('on')}renderAppointments(f)}
 function goStage(s){nav('appointments');const tab=document.querySelector(`#apt-tabs .tab[data-f="${s}"]`);setAptFilter(s,tab||document.querySelector('#apt-tabs .tab'))}
+function fillAptFilterOpts(){
+  const lab=document.getElementById('af-lab'),pk=document.getElementById('af-pkg');
+  if(lab&&lab.options.length<=1){[...new Set(BOOKINGS.map(b=>b._lab).filter(Boolean))].sort().forEach(n=>lab.add(new Option(n,n)))}
+  if(pk&&pk.options.length<=1){[...new Set(BOOKINGS.map(b=>pkgName(b)).filter(Boolean))].sort().forEach(n=>pk.add(new Option(n,n)))}
+}
+function clearAptFilters(){['af-q','af-type','af-lab','af-pkg','af-from','af-to'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});renderAppointments(curAptFilter)}
 function renderAppointments(f='all'){
+  fillAptFilterOpts();
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
   set('ac-all',BOOKINGS.length);set('ac-New',cnt('New'));set('ac-Confirmed',cnt('Confirmed'));
   set('ac-RU',cnt('Report Uploaded'));set('ac-PU',cnt('Partially Uploaded'));set('ac-RR',cnt('Reports Received'));set('ac-Rej',cnt('Rejected'));
-  let data=f==='all'?BOOKINGS:BOOKINGS.filter(b=>stg(b)===f);
+  const q=(document.getElementById('af-q')?.value||'').trim().toLowerCase();
+  const ty=document.getElementById('af-type')?.value||'';
+  const lb=document.getElementById('af-lab')?.value||'';
+  const pg=document.getElementById('af-pkg')?.value||'';
+  const fr=document.getElementById('af-from')?.value||'';
+  const to=document.getElementById('af-to')?.value||'';
+  let data=f==='all'?BOOKINGS.slice():BOOKINGS.filter(b=>stg(b)===f);
+  if(q)data=data.filter(b=>(b.id||'').toLowerCase().includes(q)||(b.patient_name||'').toLowerCase().includes(q)||(b.patient_phone||'').includes(q)||(pkgName(b)||'').toLowerCase().includes(q));
+  if(ty)data=data.filter(b=>(b.collection_type||'In Clinic')===ty);
+  if(lb)data=data.filter(b=>b._lab===lb);
+  if(pg)data=data.filter(b=>pkgName(b)===pg);
+  if(fr)data=data.filter(b=>b.appointment_date&&b.appointment_date>=fr);
+  if(to)data=data.filter(b=>b.appointment_date&&b.appointment_date<=to);
+  set('apt-result-count',data.length+' of '+BOOKINGS.length+' shown');
   const tb=document.getElementById('apt-table');
-  tb.innerHTML=data.length?data.map(b=>`<tr>
+  tb.innerHTML=data.length?data.map(b=>`<tr class="clickrow" onclick="openApt('${b.id}')">
     <td class="mono">${esc(b.id)}</td>
-    <td><div style="font-weight:600">${esc(b.patient_name||'—')}</div><div style="font-size:11px;color:var(--hint)">${esc(b.patient_gender||'')} ${b.patient_age?', '+b.patient_age:''}</div></td>
-    <td style="font-size:12px;max-width:160px">${esc(pkgName(b))}</td>
+    <td><div style="font-weight:600">${esc(b.patient_name||'—')}</div><div style="font-size:11px;color:var(--hint)">${esc(b.patient_gender||'')}${b.patient_age?', '+b.patient_age:''}</div></td>
+    <td style="font-size:12px"><div>${esc(b.patient_phone||'—')}</div>${b._company?`<div style="font-size:11px;color:var(--teal-d)">${esc(b._company)}</div>`:''}</td>
+    <td style="font-size:12px;max-width:150px">${esc(pkgName(b))}</td>
+    <td style="font-size:12px">${esc(b._lab||'—')}${b._labcity?`<div style="font-size:11px;color:var(--hint)">${esc(b._labcity)}</div>`:''}</td>
     <td><div style="font-size:12px">${dmy(b.appointment_date)}</div><div style="font-size:11px;color:var(--hint)">${esc((b.slot_time||'').slice(0,5))}</div></td>
     <td><span class="badge bb">${esc(b.collection_type||'In Clinic')}</span></td>
     <td style="font-weight:600">${money(b.amount)}</td>
     <td><span class="badge ${STAGE_CLR[stg(b)]||'bgr'}">${stg(b)}</span>${b.rejection_reason?`<div style="font-size:11px;color:var(--red);margin-top:2px">${esc(b.rejection_reason)}</div>`:''}</td>
-    <td style="text-align:right;white-space:nowrap">
+    <td style="text-align:right;white-space:nowrap" onclick="event.stopPropagation()">
       ${stg(b)==='New'?`<button class="abt c" onclick="quickConfirm('${b.id}')">Confirm</button> <button class="abt r" onclick="openReject('${b.id}','${esc(b.patient_name)}')">Reject</button> `:''}
-      <button class="abt o" onclick="openOverride('${b.id}')">⇄ Override</button>
-    </td></tr>`).join(''):'<tr><td colspan="8" class="empty">No appointments in this view</td></tr>';
+      <button class="abt o" onclick="openOverride('${b.id}')">⇄</button>
+    </td></tr>`).join(''):'<tr><td colspan="10" class="empty">No appointments match these filters</td></tr>';
+}
+// ── Appointment detail drawer (every field + audit history) ──
+function openApt(id){
+  const b=BOOKINGS.find(x=>x.id===id);if(!b)return;
+  const u=USERS.find(x=>x.id===b.user_id||x.phone===b.patient_phone);
+  const mk=maskFor(b);
+  const hist=AUDIT.filter(a=>a.booking_id===id);
+  const tr=RESULTS.filter(r=>r.booking_id===id);
+  let h=`<div class="kv">
+    <span class="k">Appointment ID</span><span class="v mono">${esc(b.id)}</span>
+    <span class="k">Stage</span><span class="v"><span class="badge ${STAGE_CLR[stg(b)]||'bgr'}">${stg(b)}</span></span>
+    <span class="k">Patient</span><span class="v">${esc(b.patient_name||'—')} ${b.patient_gender?'· '+esc(b.patient_gender):''}${b.patient_age?', '+b.patient_age:''}</span>
+    <span class="k">Phone</span><span class="v">${esc(b.patient_phone||'—')}</span>
+    ${b._company?`<span class="k">Company</span><span class="v" style="color:var(--teal-d);font-weight:700">${esc(b._company)}</span>`:''}
+    ${mk?`<span class="k">Masking ID</span><span class="v mono">${esc(mk)}</span>`:''}
+    <span class="k">Package</span><span class="v">${esc(pkgName(b))}</span>
+    <span class="k">Lab / Branch</span><span class="v">${esc(b._lab||'—')}${b._labcity?' · '+esc(b._labcity):''}</span>
+    <span class="k">Date / Slot</span><span class="v">${dmy(b.appointment_date)} · ${esc((b.slot_time||'').slice(0,5)||'—')}</span>
+    <span class="k">Collection</span><span class="v">${esc(b.collection_type||'In Clinic')}</span>
+    ${b.address?`<span class="k">Address</span><span class="v">${esc(b.address)}</span>`:''}
+    <span class="k">Amount</span><span class="v" style="font-weight:700">${money(b.amount)}${b.discount?` <span style="color:var(--hint);font-weight:400">(disc ${money(b.discount)})</span>`:''}</span>
+    ${b.promo_code?`<span class="k">Promo</span><span class="v">${esc(b.promo_code)}</span>`:''}
+    <span class="k">Payment</span><span class="v">${b.paid_at?'<span class="badge bg">Paid · '+dmy(b.paid_at)+'</span>':'<span class="badge ba">Unpaid</span>'}</span>
+    ${b.razorpay_payment_id?`<span class="k">Razorpay</span><span class="v mono" style="font-size:11px">${esc(b.razorpay_payment_id)}</span>`:''}
+    <span class="k">Created</span><span class="v">${b.created_at?new Date(b.created_at).toLocaleString('en-IN'):'—'}</span>
+    ${b.report_url?`<span class="k">Report</span><span class="v"><a href="${esc(b.report_url)}" target="_blank" style="color:var(--teal-d)">Open PDF ↗</a></span>`:''}
+    ${b.notes?`<span class="k">Notes</span><span class="v">${esc(b.notes)}</span>`:''}
+    ${b.rejection_reason?`<span class="k">Rejection</span><span class="v" style="color:var(--red)">${esc(b.rejection_reason)}</span>`:''}
+  </div>`;
+  if(tr.length){h+=`<div class="sect-h">Tests (${tr.length})</div>`+tr.map(r=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--bord2)"><span>${esc(r.test_name)}</span><span class="badge ${{received:'bg',issue:'br'}[r.vr_status]||'ba'}">${r.vr_status||'pending'}</span></div>`).join('')}
+  h+=`<div class="sect-h">Audit Trail (${hist.length})</div>`;
+  h+=hist.length?hist.map(a=>`<div class="mini-card" style="padding:9px 11px"><div style="font-size:12px;font-weight:700">${esc(a.action.replace('_',' '))}${a.from_value?` · ${esc(a.from_value)} → ${esc(a.to_value)}`:''}</div><div style="font-size:11px;color:var(--hint)">${esc(a.actor||'')} · ${new Date(a.created_at).toLocaleString('en-IN')}</div>${a.reason?`<div style="font-size:11px;color:var(--muted);margin-top:2px">"${esc(a.reason)}"</div>`:''}</div>`).join(''):'<div style="font-size:12px;color:var(--hint)">No actions logged yet.</div>';
+  document.getElementById('drawer-title').textContent=b.patient_name||b.id;
+  document.getElementById('drawer-sub').textContent=b.id;
+  document.getElementById('drawer-actions').innerHTML=`${stg(b)==='New'?`<button class="abt c" onclick="quickConfirm('${b.id}');closeDrawer()">Confirm</button> `:''}<button class="abt o" onclick="closeDrawer();openOverride('${b.id}')">⇄ Override</button>`;
+  document.getElementById('drawer-body').innerHTML=h;
+  openDrawer();
 }
 async function quickConfirm(id){
   const b=BOOKINGS.find(x=>x.id===id);const from=stg(b);
@@ -643,30 +891,66 @@ async function finalize(id){
 }
 
 // ════════ CUSTOMERS ════════
+function custBookings(u){return BOOKINGS.filter(b=>b.user_id===u.id||(u.phone&&b.patient_phone===u.phone))}
 function renderCustomers(){
-  document.getElementById('cust-count').textContent=USERS.length;
-  document.getElementById('cust-table').innerHTML=USERS.length?USERS.map(u=>{
-    const n=BOOKINGS.filter(b=>b.user_id===u.id||b.patient_phone===u.phone).length;
-    return `<tr style="cursor:pointer" onclick="openCust('${u.id}')"><td style="font-weight:600">${esc(u.name||'—')}</td><td class="mono" style="color:var(--slate)">${esc(u.phone||'')}</td><td>${esc(u.city||'—')}</td><td>${n}</td></tr>`;
-  }).join(''):'<tr><td colspan="4" class="empty">No customers</td></tr>';
+  const q=(document.getElementById('cust-q')?.value||'').trim().toLowerCase();
+  let list=USERS.slice();
+  if(q){
+    list=USERS.filter(u=>{
+      const bk=custBookings(u);
+      const masks=bk.map(maskFor).filter(Boolean).join(' ').toLowerCase();
+      const aptids=bk.map(b=>b.id).join(' ').toLowerCase();
+      return (u.name||'').toLowerCase().includes(q)
+        || (u._company||'').toLowerCase().includes(q)
+        || (u.phone||'').includes(q)
+        || (u.email||'').toLowerCase().includes(q)
+        || (u.employee_code||'').toLowerCase().includes(q)
+        || (u.city||'').toLowerCase().includes(q)
+        || masks.includes(q) || aptids.includes(q);
+    });
+  }
+  document.getElementById('cust-count').textContent=list.length;
+  const rc=document.getElementById('cust-result'); if(rc)rc.textContent=q?(list.length+' match'):'';
+  document.getElementById('cust-table').innerHTML=list.length?list.map(u=>{
+    const n=custBookings(u).length;
+    return `<tr class="clickrow" onclick="openCust('${u.id}')"><td style="font-weight:600">${esc(u.name||'—')}</td><td style="font-size:12px;color:var(--teal-d)">${esc(u._company||'—')}</td><td class="mono" style="color:var(--slate)">${esc(u.phone||'')}</td><td>${n}</td></tr>`;
+  }).join(''):'<tr><td colspan="4" class="empty">No customers match</td></tr>';
 }
 function openCust(uid){
-  const u=USERS.find(x=>x.id===uid);
-  const bk=BOOKINGS.filter(b=>b.user_id===uid||b.patient_phone===u.phone);
-  const spend=bk.filter(b=>['Reports Received','Confirmed'].includes(stg(b))).reduce((s,b)=>s+(b.amount||0),0);
-  let h=`<div style="padding:14px 16px">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
-      <div style="width:46px;height:46px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px">${esc((u.name||'?').slice(0,1).toUpperCase())}</div>
-      <div><div style="font-size:16px;font-weight:800">${esc(u.name||'—')}</div><div style="font-size:12px;color:var(--hint)">${esc(u.phone||'')} · ${esc(u.city||'')}</div></div>
+  const u=USERS.find(x=>x.id===uid);if(!u)return;
+  const bk=custBookings(u);
+  const done=bk.filter(b=>stg(b)==='Reports Received');
+  const spend=bk.reduce((s,b)=>s+(b.amount||0),0);
+  const realized=done.reduce((s,b)=>s+(b.amount||0),0);
+  const masks=[...new Set(bk.map(maskFor).filter(Boolean))];
+  const verifiedTests=RESULTS.filter(r=>bk.some(b=>b.id===r.booking_id)&&r.vr_status==='received').length;
+  let h=`<div style="padding:16px 18px">
+    <div style="display:flex;align-items:center;gap:13px;margin-bottom:16px">
+      <div style="width:52px;height:52px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px">${esc((u.name||'?').slice(0,1).toUpperCase())}</div>
+      <div><div style="font-size:18px;font-weight:800">${esc(u.name||'—')}</div><div style="font-size:12px;color:var(--hint)">${u._company?esc(u._company)+' · ':''}${esc(u.employee_code||'')}</div></div>
     </div>
-    <div class="iline"><span class="lbl">Email</span><span>${esc(u.email||'—')}</span></div>
-    <div class="iline"><span class="lbl">Gender / DOB</span><span>${esc(u.gender||'—')} ${u.dob?'· '+dmy(u.dob):''}</span></div>
-    <div class="iline"><span class="lbl">Total bookings</span><span style="font-weight:700">${bk.length}</span></div>
-    <div class="iline"><span class="lbl">Lifetime value</span><span style="font-weight:700;color:var(--teal-d)">${money(spend)}</span></div>
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:16px 0 8px">Booking History</div>`;
-  h+=bk.length?bk.map(b=>`<div style="border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:7px;font-size:12px">
-    <div style="display:flex;justify-content:space-between"><span class="mono">${esc(b.id)}</span><span class="badge ${STAGE_CLR[stg(b)]}">${stg(b)}</span></div>
-    <div style="margin-top:3px">${esc(pkgName(b))} · ${dmy(b.appointment_date)}</div></div>`).join(''):'<div class="empty">No bookings yet</div>';
+    <div class="kv">
+      <span class="k">Company</span><span class="v" style="color:var(--teal-d);font-weight:700">${esc(u._company||'— (not linked)')}</span>
+      <span class="k">Employee Code</span><span class="v mono">${esc(u.employee_code||'—')}</span>
+      <span class="k">Contact No.</span><span class="v">${esc(u.phone||'—')}</span>
+      <span class="k">Email</span><span class="v">${esc(u.email||'—')}</span>
+      <span class="k">Gender / DOB</span><span class="v">${esc(u.gender||'—')}${u.dob?' · '+dmy(u.dob):''}</span>
+      <span class="k">City</span><span class="v">${esc(u.city||'—')}</span>
+      <span class="k">Masking ID(s)</span><span class="v">${masks.length?masks.map(m=>`<span class='mono'>${esc(m)}</span>`).join(', '):'—'}</span>
+      <span class="k">Customer since</span><span class="v">${u.created_at?dmy(u.created_at):'—'}</span>
+    </div>
+    <div style="display:flex;gap:8px;margin:14px 0">
+      <div class="mini-card" style="flex:1;text-align:center;margin:0"><div style="font-size:20px;font-weight:800">${bk.length}</div><div style="font-size:10px;color:var(--hint);text-transform:uppercase;letter-spacing:.4px">Appointments</div></div>
+      <div class="mini-card" style="flex:1;text-align:center;margin:0"><div style="font-size:20px;font-weight:800;color:var(--teal-d)">${money(realized)}</div><div style="font-size:10px;color:var(--hint);text-transform:uppercase;letter-spacing:.4px">Realized LTV</div></div>
+      <div class="mini-card" style="flex:1;text-align:center;margin:0"><div style="font-size:20px;font-weight:800">${verifiedTests}</div><div style="font-size:10px;color:var(--hint);text-transform:uppercase;letter-spacing:.4px">Tests done</div></div>
+    </div>
+    <div class="sect-h">Appointment IDs</div>
+    <div>${bk.length?bk.map(b=>`<span class="chip" style="cursor:pointer" onclick="nav('appointments');setTimeout(()=>openApt('${b.id}'),60)">${esc(b.id)}</span>`).join(''):'<span style="font-size:12px;color:var(--hint)">No appointments</span>'}</div>
+    <div class="sect-h">Full Booking History</div>`;
+  h+=bk.length?bk.map(b=>`<div class="mini-card clickrow" onclick="nav('appointments');setTimeout(()=>openApt('${b.id}'),60)">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span class="mono">${esc(b.id)}</span><span class="badge ${STAGE_CLR[stg(b)]||'bgr'}">${stg(b)}</span></div>
+    <div style="margin-top:4px;font-size:13px;font-weight:600">${esc(pkgName(b))}</div>
+    <div style="font-size:11px;color:var(--hint);margin-top:2px">${dmy(b.appointment_date)} · ${esc(b._lab||'—')} · ${money(b.amount)}</div></div>`).join(''):'<div class="empty">No bookings yet</div>';
   h+=`</div>`;
   document.getElementById('cust-detail').outerHTML=`<div id="cust-detail">${h}</div>`;
 }
@@ -693,21 +977,156 @@ function renderSystem(){
     <td>${p.test_count||0}</td><td style="color:var(--hint);text-decoration:line-through">${money(p.mrp)}</td>
     <td style="font-weight:700">${money(p.base_price)}</td><td><span class="badge ${p.active!==false?'bg':'bgr'}">${p.active!==false?'Active':'Inactive'}</span></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No packages</td></tr>';
 }
+function partnerSwitch(t,el){partnerTab=t;document.querySelectorAll('#p-partner .seg button').forEach(b=>b.classList.toggle('on',b.dataset.pt===t));document.querySelectorAll('#p-partner .subpane').forEach(p=>p.classList.toggle('show',p.id==='pt-'+t));}
+function pkgById(id){const p=PACKAGES.find(x=>x.id===id);return p?p.name:'—'}
+function labById(id){const l=LABS.find(x=>x.id===id);return l?(l.branch_name||l.name):'—'}
 function renderPartner(){
-  const nabl=LABS.filter(l=>l.nabl_certified).length,home=LABS.filter(l=>l.home_collection).length;
-  const avg=LABS.length?(LABS.reduce((s,l)=>s+(l.rating||0),0)/LABS.length).toFixed(1):'—';
+  document.getElementById('ps-ents').textContent=ENTS.length;
   document.getElementById('ps-labs').textContent=LABS.length;
-  document.getElementById('ps-nabl').textContent=nabl;
-  document.getElementById('ps-home').textContent=home;
-  document.getElementById('ps-rating').textContent=avg;
+  document.getElementById('ps-maps').textContent=CPKG.length;
+  document.getElementById('ps-nabl').textContent=LABS.filter(l=>l.nabl_certified).length;
+  // Enterprises list
+  document.getElementById('ent-list').innerHTML=ENTS.length?ENTS.map(e=>{
+    const np=LABS.filter(l=>l.enterprise_id===e.id).length;
+    return `<tr class="clickrow" onclick="openEnterprise('${e.id}')"><td style="font-weight:600">${esc(e.name)}</td><td><span class="badge bb">${esc(e.type||'Corporate')}</span></td><td>${np}</td><td><span class="badge ${e.active!==false?'bg':'bgr'}">${e.active!==false?'Active':'Inactive'}</span></td></tr>`;
+  }).join(''):'<tr><td colspan="4" class="empty">No enterprises yet — click “+ New”.</td></tr>';
+  // Providers table (with enterprise)
   document.getElementById('labs-table').innerHTML=LABS.length?LABS.map(l=>{
     const certs=[l.nabl_certified&&'NABL',l.nabh_certified&&'NABH',l.iso_certified&&'ISO'].filter(Boolean);
     return `<tr><td style="font-weight:600">${esc(l.branch_name||l.name)}<div style="font-size:11px;color:var(--hint)">${esc(l.network_type||'')}</div></td>
+    <td style="font-size:12px;color:var(--teal-d)">${esc(entName(l.enterprise_id)||'—')}</td>
     <td>${esc(l.city||'—')}</td><td>${certs.length?certs.map(c=>`<span class="badge bt" style="margin-right:3px">${c}</span>`).join(''):'<span style="color:var(--hint)">—</span>'}</td>
     <td>${l.home_collection?'<span class="badge bg">Yes</span>':'<span class="badge bgr">No</span>'}</td>
     <td>${l.avg_tat_hours?l.avg_tat_hours+'h':'—'}</td><td>⭐ ${l.rating||'—'}</td>
     <td><span class="badge ${l.active!==false&&l.status!=='inactive'?'bg':'bgr'}">${l.active!==false&&l.status!=='inactive'?'Active':'Inactive'}</span></td></tr>`;
-  }).join(''):'<tr><td colspan="7" class="empty">No labs</td></tr>';
+  }).join(''):'<tr><td colspan="8" class="empty">No providers</td></tr>';
+  // Company-package mapping
+  document.getElementById('cpkg-table').innerHTML=CPKG.length?CPKG.map(c=>`<tr>
+    <td style="font-weight:600">${esc(entName(c.enterprise_id)||'—')}</td><td>${esc(pkgById(c.package_id))}</td>
+    <td style="font-weight:700;color:var(--teal-d)">${money(c.employee_price)}</td><td>${c.annual_limit||'—'}</td>
+    <td><span class="badge ${c.active!==false?'bg':'bgr'}">${c.active!==false?'Active':'Inactive'}</span></td>
+    <td style="text-align:right"><button class="abt r" onclick="unmapCpkg('${c.id}')">Remove</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No mappings yet</td></tr>';
+  // Provider-package offerings
+  document.getElementById('labpkg-table').innerHTML=LABPKG.length?LABPKG.map(lp=>`<tr>
+    <td style="font-weight:600">${esc(labById(lp.lab_id))}</td><td>${esc(pkgById(lp.package_id))}</td>
+    <td>${money(lp.price)}</td><td style="color:var(--hint)">${money(lp.mrp)}</td>
+    <td><span class="badge ${lp.active!==false?'bg':'bgr'}">${lp.active!==false?'Active':'Inactive'}</span></td></tr>`).join(''):'<tr><td colspan="5" class="empty">No offerings</td></tr>';
+  // Facility matrix lab selector
+  const fl=document.getElementById('fac-lab');
+  if(fl&&fl.options.length===0){LABS.forEach(l=>fl.add(new Option(l.branch_name||l.name,l.id)));curFacLab=LABS[0]&&LABS[0].id;}
+  renderFacility();
+  partnerSwitch(partnerTab);
+}
+function openEnterprise(id){
+  curEnt=id;const e=ENTS.find(x=>x.id===id);if(!e)return;
+  const provs=LABS.filter(l=>l.enterprise_id===id);
+  const facs=EFAC.filter(x=>x.enterprise_id===id);
+  const maps=CPKG.filter(x=>x.enterprise_id===id);
+  let h=`<div style="padding:15px 16px">
+    <div style="font-size:16px;font-weight:800;margin-bottom:3px">${esc(e.name)}</div>
+    <div style="font-size:12px;color:var(--hint);margin-bottom:12px">${esc(e.type||'Corporate')} · since ${e.created_at?dmy(e.created_at):'—'}</div>
+    <div class="kv">
+      <span class="k">POC</span><span class="v">${esc(e.poc_name||'—')}${e.poc_email?' · '+esc(e.poc_email):''}</span>
+      <span class="k">Phone</span><span class="v">${esc(e.poc_phone||'—')}</span>
+      <span class="k">Contract</span><span class="v">${dmy(e.contract_start)} – ${dmy(e.contract_end)}</span>
+      <span class="k">Discount</span><span class="v">${e.discount_pct?e.discount_pct+'%':'—'}</span>
+      <span class="k">Annual quota</span><span class="v">${e.annual_quota_per_employee||'—'} / employee</span>
+    </div>
+    <div class="sect-h">Providers (${provs.length}) <button class="btn sm" style="padding:3px 9px" onclick="openProvModal('${id}')">+ Add</button></div>`;
+  h+=provs.length?provs.map(l=>`<div class="mini-card" style="padding:9px 11px"><div style="display:flex;justify-content:space-between"><span style="font-weight:600">${esc(l.branch_name||l.name)}</span><span class="badge ${l.active!==false?'bg':'bgr'}">${l.active!==false?'Active':'Off'}</span></div><div style="font-size:11px;color:var(--hint)">${esc(l.city||'')}</div></div>`).join(''):'<div style="font-size:12px;color:var(--hint)">No providers yet</div>';
+  h+=`<div class="sect-h">Facility Branches (${facs.length})</div>`;
+  h+=facs.length?facs.map(x=>`<div class="mini-card" style="padding:9px 11px"><span style="font-weight:600">${esc(x.name)}</span><div style="font-size:11px;color:var(--hint)">${esc(x.city||'')} ${esc(x.pincode||'')}</div></div>`).join(''):'<div style="font-size:12px;color:var(--hint)">None recorded</div>';
+  h+=`<div class="sect-h">Mapped Packages (${maps.length}) <button class="btn sm" style="padding:3px 9px" onclick="openCpkgModal('${id}')">+ Map</button></div>`;
+  h+=maps.length?maps.map(m=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--bord2)"><span>${esc(pkgById(m.package_id))}</span><span style="font-weight:700;color:var(--teal-d)">${money(m.employee_price)}</span></div>`).join(''):'<div style="font-size:12px;color:var(--hint)">No packages mapped</div>';
+  h+=`</div>`;
+  document.getElementById('ent-detail').outerHTML=`<div id="ent-detail">${h}</div>`;
+}
+function renderFacility(){
+  const fl=document.getElementById('fac-lab');const labId=fl?fl.value:curFacLab;curFacLab=labId;
+  const tb=document.getElementById('fac-table');if(!tb)return;
+  if(!labId){tb.innerHTML='<tr><td colspan="4" class="empty">No provider selected</td></tr>';return}
+  const rows=LABTESTS.filter(x=>x.lab_id===labId);
+  const byTest={};rows.forEach(r=>byTest[r.test_id]=r);
+  tb.innerHTML=TESTS.length?TESTS.map(t=>{
+    const lt=byTest[t.id];const on=lt?lt.active!==false:false;
+    return `<tr><td style="font-weight:600">${esc(t.name)}</td><td><span class="badge bgr">${esc(t.category||'—')}</span></td><td>${t.tat_hours?t.tat_hours+'h':'—'}</td>
+    <td style="text-align:right"><div class="toggle ${on?'on':''}" onclick="toggleFacility('${labId}','${t.id}',${on?'true':'false'})"></div></td></tr>`;
+  }).join(''):'<tr><td colspan="4" class="empty">No catalog tests</td></tr>';
+}
+async function toggleFacility(labId,testId,cur){
+  const next=!cur;
+  const existing=LABTESTS.find(x=>x.lab_id===labId&&x.test_id===testId);
+  if(existing){
+    const {error}=await SB.from('lab_tests').update({active:next}).eq('id',existing.id);
+    if(error)return toast('e',error.message); existing.active=next;
+  }else{
+    const t=TESTS.find(x=>x.id===testId);
+    const {data,error}=await SB.from('lab_tests').insert({lab_id:labId,test_id:testId,price:(t&&t.base_price)||0,active:next}).select().single();
+    if(error)return toast('e',error.message); if(data)LABTESTS.push(data);
+  }
+  toast('s','Facility '+(next?'enabled':'disabled'));renderFacility();
+}
+// ── Create Enterprise ──
+function openEntModal(){['en-name','en-poc','en-email','en-phone','en-disc','en-quota','en-cs','en-ce'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});document.getElementById('en-type').value='Corporate';openMod('ent-modal')}
+async function createEnterprise(){
+  const name=document.getElementById('en-name').value.trim();
+  if(!name)return toast('e','Enterprise name is required');
+  const rec={name,type:document.getElementById('en-type').value,
+    poc_name:document.getElementById('en-poc').value.trim()||null,
+    poc_email:document.getElementById('en-email').value.trim()||null,
+    poc_phone:document.getElementById('en-phone').value.trim()||null,
+    discount_pct:parseFloat(document.getElementById('en-disc').value)||null,
+    annual_quota_per_employee:parseInt(document.getElementById('en-quota').value)||null,
+    contract_start:document.getElementById('en-cs').value||null,
+    contract_end:document.getElementById('en-ce').value||null, active:true};
+  const {error}=await SB.from('enterprises').insert(rec);
+  if(error)return toast('e',error.message);
+  closeMod('ent-modal');toast('s','Enterprise “'+name+'” created');await refresh();
+}
+// ── Add Provider ──
+function openProvModal(entId){
+  ['pv-name','pv-branch','pv-city','pv-addr','pv-phone','pv-tat'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  ['pv-nabl','pv-home'].forEach(id=>document.getElementById(id).checked=false);
+  const sel=document.getElementById('pv-ent');sel.innerHTML='<option value="">— none —</option>'+ENTS.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  if(entId)sel.value=entId; openMod('prov-modal');
+}
+async function addProvider(){
+  const name=document.getElementById('pv-name').value.trim();
+  if(!name)return toast('e','Provider name is required');
+  const rec={name,branch_name:document.getElementById('pv-branch').value.trim()||name,
+    enterprise_id:document.getElementById('pv-ent').value||null,
+    city:document.getElementById('pv-city').value.trim()||null,
+    address:document.getElementById('pv-addr').value.trim()||null,
+    phone:document.getElementById('pv-phone').value.trim()||null,
+    avg_tat_hours:parseInt(document.getElementById('pv-tat').value)||null,
+    nabl_certified:document.getElementById('pv-nabl').checked,
+    home_collection:document.getElementById('pv-home').checked,
+    network_type:'Partner', active:true, status:'active'};
+  const {error}=await SB.from('labs').insert(rec);
+  if(error)return toast('e',error.message);
+  closeMod('prov-modal');toast('s','Provider “'+name+'” added');await refresh();
+}
+// ── Map package to company ──
+function openCpkgModal(entId){
+  const se=document.getElementById('cp-ent');se.innerHTML=ENTS.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  if(entId)se.value=entId;
+  document.getElementById('cp-pkg').innerHTML=PACKAGES.map(p=>`<option value="${p.id}" data-price="${p.base_price||0}">${esc(p.name)} (${money(p.base_price)})</option>`).join('');
+  cpkgSync();document.getElementById('cp-limit').value='2';openMod('cpkg-modal');
+}
+function cpkgSync(){const o=document.getElementById('cp-pkg').selectedOptions[0];if(o)document.getElementById('cp-price').value=Math.round((o.dataset.price||0)*0.85)}
+async function mapCompanyPackage(){
+  const rec={enterprise_id:document.getElementById('cp-ent').value,package_id:document.getElementById('cp-pkg').value,
+    employee_price:parseFloat(document.getElementById('cp-price').value)||null,
+    annual_limit:parseInt(document.getElementById('cp-limit').value)||null, active:true};
+  if(!rec.enterprise_id||!rec.package_id)return toast('e','Pick a company and a package');
+  const {error}=await SB.from('company_packages').upsert(rec,{onConflict:'enterprise_id,package_id'});
+  if(error)return toast('e',error.message);
+  closeMod('cpkg-modal');toast('s','Package mapped to company');await refresh();
+}
+async function unmapCpkg(id){
+  const {error}=await SB.from('company_packages').delete().eq('id',id);
+  if(error)return toast('e',error.message);
+  toast('s','Mapping removed');await refresh();
 }
 function renderFinance(){
   const val=arr=>arr.reduce((s,b)=>s+(b.amount||0),0);
@@ -750,6 +1169,8 @@ function globalSearch(q){
 
 // ════════ MODAL / TOAST / AUTH ════════
 function openMod(id){document.getElementById(id).classList.add('open')}
+function openDrawer(){document.getElementById('drawer-ov').classList.add('open');document.getElementById('drawer').classList.add('open')}
+function closeDrawer(){document.getElementById('drawer-ov').classList.remove('open');document.getElementById('drawer').classList.remove('open')}
 function closeMod(id){document.getElementById(id).classList.remove('open')}
 function toast(type,msg){
   const c=document.getElementById('toasts');const t=document.createElement('div');t.className='toast '+type;
