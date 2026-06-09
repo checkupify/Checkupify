@@ -48,7 +48,24 @@ export default function App() {
       supabase.from("packages").select("*").eq("active", true).order("sort_order"),
       supabase.from("labs").select("*").eq("active", true),
     ]);
-    if (pRes.status === "fulfilled" && pRes.value.data) setPkgs(pRes.value.data as Pkg[]);
+    let pkgList: Pkg[] = pRes.status === "fulfilled" && pRes.value.data ? (pRes.value.data as Pkg[]) : [];
+    // Corporate plan: if this employee's company has mapped packages, show ONLY those, at the negotiated employee price
+    if (usr?.enterprise_id) {
+      const { data: maps } = await supabase.from("company_packages")
+        .select("package_id,employee_price,annual_limit,active")
+        .eq("enterprise_id", usr.enterprise_id).eq("active", true);
+      type CPkg = { package_id: string; employee_price: number | null; annual_limit: number | null; active: boolean };
+      const cmaps = (maps ?? []) as CPkg[];
+      if (cmaps.length) {
+        const byId = new Map<string, CPkg>(cmaps.map(m => [m.package_id, m]));
+        pkgList = pkgList.filter(p => byId.has(p.id)).map(p => {
+          const m = byId.get(p.id)!;
+          const corpPrice = m.employee_price ?? p.base_price;
+          return { ...p, mrp: p.mrp || p.base_price, base_price: corpPrice, badge: "🏢 Corporate", corp: true };
+        });
+      }
+    }
+    setPkgs(pkgList);
     if (lRes.status === "fulfilled" && lRes.value.data) setLabs(lRes.value.data as Lab[]);
     if (usr?.phone) {
       const { data } = await supabase.from("bookings")
@@ -443,6 +460,11 @@ function Packages({ pkgs, onSelect, onBack }: { pkgs: Pkg[]; onSelect: (p: Pkg) 
     <div style={{ minHeight: "100svh", background: "#F0F4F8" }}>
       <div style={{ background: navyGrad, padding: "52px 20px 24px" }}>
         <BackHeader title="Health Packages" subtitle={`${filtered.length} available`} onBack={onBack} white />
+        {pkgs.some(p => p.corp) && (
+          <div style={{ background: "rgba(34,197,94,.15)", border: "1px solid rgba(34,197,94,.35)", borderRadius: 12, padding: "10px 14px", marginBottom: 12, fontSize: 12.5, fontWeight: 700, color: "#BBF7D0" }}>
+            🏢 Your company plan is active — corporate prices applied
+          </div>
+        )}
         <div style={{ background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.15)", borderRadius: 14, display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", marginBottom: 16 }}>
           <span style={{ fontSize: 16, color: "rgba(255,255,255,.4)" }}>🔍</span>
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search tests & packages…"
@@ -637,7 +659,7 @@ function Confirm({ pkg, lab, date, slot, type, user, onSuccess, onBack }: { pkg:
       patient_name: name.trim(), patient_age: parseInt(age) || 0, patient_gender: gender,
       patient_phone: user.phone, appointment_date: date, slot_time: slot + ":00",
       collection_type: type, amount: total, discount: 0,
-      status: "pending_payment", stage: "New", sla_status: "On Track", is_corporate: false,
+      status: "pending_payment", stage: "New", sla_status: "On Track", is_corporate: !!user.enterprise_id,
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     });
     setLoading(false);
