@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Checkupify — Operations Console</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --teal:#00CC8E;--teal-d:#00A873;--teal-l:#E6FFF7;
+  --navy:#0B2545;--ink:#0F172A;--slate:#334155;--muted:#64748B;--hint:#94A3B8;
+  --border:#E2E8F0;--bord2:#F1F5F9;
+  --bg:#F8FAFC;--surface:#FFFFFF;--s2:#F8FAFC;
+  --red:#DC2626;--redbg:#FEF2F2;--redbord:#FECACA;
+  --amber:#D97706;--amberbg:#FFFBEB;--amberbord:#FDE68A;
+  --green:#059669;--greenbg:#ECFDF5;--greenbord:#A7F3D0;
+  --blue:#1D4ED8;--bluebg:#EFF6FF;--bluebord:#BFDBFE;
+  --purple:#7C3AED;--purplebg:#F5F3FF;
+  --r4:4px;--r6:6px;--r8:8px;--r10:10px;--r12:12px;--r16:16px;
+}
+html,body{height:100vh;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:14px;color:var(--ink);background:var(--bg);line-height:1.5}
+svg{flex-shrink:0}
+#app{display:flex;height:100vh;width:100vw}
+/* SIDEBAR */
+#sb{width:248px;min-width:248px;background:var(--navy);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.sb-top{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-logo{display:flex;align-items:center;gap:9px}
+.sb-ic{width:34px;height:34px;background:var(--teal);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:800;flex-shrink:0}
+.sb-brand-name{font-size:15px;font-weight:800;color:#fff}
+.sb-brand-sub{font-size:10px;color:rgba(255,255,255,.45)}
+.sb-nav{flex:1;overflow-y:auto;padding:6px 8px}
+.sb-nav::-webkit-scrollbar{width:3px}.sb-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1)}
+.sb-sect{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.3);padding:12px 10px 4px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r8);cursor:pointer;font-size:13px;font-weight:500;color:rgba(255,255,255,.62);margin-bottom:1px;border:1px solid transparent;transition:.1s}
+.sb-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.sb-item.active{background:rgba(0,204,142,.15);color:var(--teal);border-color:rgba(0,204,142,.2)}
+.sb-item svg{opacity:.6;width:15px;height:15px}
+.sb-item.active svg{opacity:1}
+.sb-badge{margin-left:auto;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#EF4444;color:#fff}
+.sb-badge.a{background:#F59E0B}.sb-badge.t{background:var(--teal)}
+.sb-soon{margin-left:auto;font-size:8px;font-weight:700;letter-spacing:.5px;padding:2px 6px;border-radius:5px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.4)}
+.sb-divider{height:1px;background:rgba(255,255,255,.07);margin:5px 6px}
+.sb-user{padding:12px 14px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;cursor:pointer}
+.sb-user:hover{background:rgba(255,255,255,.04)}
+.sb-av{width:32px;height:32px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px;flex-shrink:0}
+.sb-uname{font-size:12px;font-weight:700;color:#fff}
+.sb-urole{font-size:10px;color:rgba(255,255,255,.45)}
+/* MAIN */
+#main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+#topbar{display:flex;align-items:center;gap:10px;padding:10px 22px;border-bottom:1px solid var(--border);background:#fff;flex-shrink:0;min-height:58px}
+.breadcrumb{font-size:13px;color:var(--hint)}
+.breadcrumb b{color:var(--ink);font-weight:700}
+.tb-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.gsearch{display:flex;align-items:center;gap:7px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r8);padding:7px 12px;width:260px}
+.gsearch input{border:none;background:none;outline:none;font-size:13px;width:100%;font-family:inherit;color:var(--ink)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--r8);border:1px solid var(--border);background:#fff;font-size:13px;font-weight:500;cursor:pointer;color:var(--slate);font-family:inherit;white-space:nowrap;transition:.1s}
+.btn:hover{background:var(--s2)}
+.btn.primary{background:var(--teal);color:#fff;border-color:var(--teal);font-weight:600}
+.btn.primary:hover{background:var(--teal-d)}
+.btn.danger{background:var(--redbg);color:var(--red);border-color:var(--redbord)}
+.btn.sm{padding:5px 11px;font-size:12px}
+.icon-btn{width:36px;height:36px;border-radius:var(--r8);border:1px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
+.icon-btn:hover{background:var(--s2)}
+.notif-dot{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:#EF4444;border:2px solid #fff}
+#content{flex:1;overflow-y:auto;padding:20px 22px;background:var(--bg)}
+#content::-webkit-scrollbar{width:6px}#content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.page{display:none;flex-direction:column;gap:16px;animation:fadein .15s}
+.page.show{display:flex}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.ptitle{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.psub{font-size:13px;color:var(--hint);margin-top:2px}
+.phead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+/* METRICS */
+.metrics{display:grid;gap:12px}
+.m3{grid-template-columns:repeat(3,1fr)}.m4{grid-template-columns:repeat(4,1fr)}
+.m5{grid-template-columns:repeat(5,1fr)}.m6{grid-template-columns:repeat(6,1fr)}
+.mcard{background:#fff;border:1px solid var(--border);border-radius:var(--r10);padding:15px 16px;position:relative;overflow:hidden;transition:border-color .15s;cursor:default}
+.mcard.clk{cursor:pointer}.mcard.clk:hover{border-color:var(--teal)}
+.mcard-top{position:absolute;top:0;left:0;right:0;height:3px}
+.mlabel{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px}
+.mval{font-size:26px;font-weight:800;line-height:1;margin-bottom:4px;font-variant-numeric:tabular-nums}
+.msub{font-size:11px;color:var(--hint)}
+/* CARD */
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--r12);overflow:hidden}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.card-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 14px;overflow-x:auto;flex-shrink:0}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:10px 13px;font-size:13px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:.1s}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--teal-d);border-bottom-color:var(--teal);font-weight:600}
+.tcnt{font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--bord2);color:var(--muted)}
+.tab.on .tcnt{background:var(--greenbg);color:var(--teal-d)}
+/* TABLE */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--hint);padding:10px 14px;text-align:left;background:var(--s2);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--bord2);color:var(--slate);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#FAFBFC}
+.mono{font-family:'SF Mono',ui-monospace,monospace;font-size:11px;color:var(--teal-d);font-weight:700;font-variant-numeric:tabular-nums}
+/* BADGE */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:5px;font-size:11px;font-weight:700;white-space:nowrap}
+.bg{background:var(--greenbg);color:#065F46}.br{background:var(--redbg);color:#991B1B}
+.ba{background:var(--amberbg);color:#92400E}.bb{background:var(--bluebg);color:#1E40AF}
+.bn{background:#EEF2FF;color:#3730A3}.bgr{background:var(--bord2);color:var(--muted)}
+.bp{background:var(--purplebg);color:var(--purple)}.bt{background:var(--teal-l);color:var(--teal-d)}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+/* PBAR */
+.pbar{height:6px;border-radius:3px;background:var(--bord2);overflow:hidden}
+.pfill{height:100%;border-radius:3px}
+/* ACT BTN */
+.abt{padding:4px 10px;border-radius:var(--r6);border:1px solid var(--border);background:#fff;font-size:12px;font-weight:500;cursor:pointer;color:var(--slate);font-family:inherit;transition:.1s;display:inline-flex;align-items:center;gap:4px}
+.abt:hover{background:var(--s2)}
+.abt.c{background:var(--greenbg);color:#065F46;border-color:var(--greenbord)}
+.abt.r{background:var(--redbg);color:#991B1B;border-color:var(--redbord)}
+.abt.u{background:var(--bluebg);color:#1E40AF;border-color:var(--bluebord)}
+.abt.o{background:var(--purplebg);color:var(--purple);border-color:#DDD6FE}
+/* MODAL */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+.ov.open{display:flex}
+.modal{background:#fff;border-radius:var(--r12);width:100%;position:relative;box-shadow:0 25px 50px rgba(0,0,0,.18);animation:fadein .15s}
+.modal-sm{max-width:460px}.modal-md{max-width:640px}.modal-lg{max-width:860px}
+.mhead{display:flex;align-items:flex-start;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
+.mtitle{font-size:16px;font-weight:800}
+.mclose{width:30px;height:30px;border-radius:var(--r6);border:1px solid var(--border);background:var(--s2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted)}
+.mbody{padding:20px 22px;max-height:64vh;overflow-y:auto}
+.mfoot{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
+/* FORM */
+.fgrp{margin-bottom:14px}
+.fgrp label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.fgrp input,.fgrp select,.fgrp textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r8);font-size:13px;color:var(--ink);background:#fff;font-family:inherit;outline:none;transition:.1s}
+.fgrp input:focus,.fgrp select:focus,.fgrp textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,204,142,.1)}
+.frow{display:grid;gap:12px}.f2{grid-template-columns:1fr 1fr}
+.req{color:#EF4444}
+/* ALERT */
+.alert{border-radius:var(--r8);padding:11px 15px;display:flex;align-items:flex-start;gap:9px;font-size:13px}
+.alert-a{background:var(--amberbg);border:1px solid var(--amberbord);color:#92400E}
+.alert-b{background:var(--bluebg);border:1px solid var(--bluebord);color:#1E40AF}
+.alert-g{background:var(--greenbg);border:1px solid var(--greenbord);color:#065F46}
+/* TOAST */
+#toasts{position:fixed;bottom:22px;right:22px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:#fff;border:1px solid var(--border);border-radius:var(--r10);padding:12px 16px;box-shadow:0 8px 24px rgba(0,0,0,.12);display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500;min-width:280px;pointer-events:all;animation:tin .25s ease}
+.toast.s{border-left:3px solid var(--teal)}.toast.e{border-left:3px solid var(--red)}
+.toast.i{border-left:3px solid #3B82F6}.toast.w{border-left:3px solid var(--amber)}
+@keyframes tin{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g21{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+.fcol{display:flex;flex-direction:column;gap:16px}
+.iline{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--bord2);font-size:13px}
+.iline:last-child{border-bottom:none}.iline .lbl{color:var(--muted)}
+.empty{padding:40px;text-align:center;color:var(--hint);font-size:13px}
+.feed-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--bord2);font-size:12px}
+.feed-item:last-child{border-bottom:none}
+.feed-ic{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
+.soon-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;gap:10px}
+.soon-badge{font-size:10px;font-weight:800;letter-spacing:1px;padding:4px 12px;border-radius:20px;background:var(--purplebg);color:var(--purple)}
+.chartbars{display:flex;align-items:flex-end;gap:6px;height:120px}
+.cbar{flex:1;border-radius:4px 4px 0 0;min-height:3px;transition:opacity .1s}
+.cbar:hover{opacity:.78}
+.clabels{display:flex;gap:6px;margin-top:6px}
+.clbl{flex:1;font-size:10px;color:var(--hint);text-align:center}
+/* LOGIN */
+#login-gate{display:none;position:fixed;inset:0;z-index:2000;background:linear-gradient(155deg,#0B2545,#1B4B8A);align-items:center;justify-content:center}
+.lg-card{background:#fff;border-radius:18px;padding:36px 34px;width:100%;max-width:400px;box-shadow:0 30px 70px rgba(0,0,0,.35)}
+</style>
+</head>
+<body>
+<div id="toasts"></div>
+
+<!-- LOGIN -->
+<div id="login-gate">
+  <div class="lg-card">
+    <div style="display:flex;align-items:center;gap:11px;margin-bottom:24px">
+      <div style="width:42px;height:42px;border-radius:12px;background:var(--teal);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:17px">CK</div>
+      <div><div style="font-size:17px;font-weight:800">Checkupify</div><div style="font-size:11px;color:var(--hint)">Operations Console · CRM</div></div>
+    </div>
+    <div style="font-size:23px;font-weight:800;margin-bottom:4px">Welcome back</div>
+    <div style="font-size:13px;color:var(--hint);margin-bottom:22px">Sign in with your staff credentials</div>
+    <div class="fgrp"><label>Email</label><input id="lg-email" type="email" value="ops@checkupify.com"></div>
+    <div class="fgrp"><label>Password</label><input id="lg-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div id="lg-err" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:6px"></div>
+    <button id="lg-btn" class="btn primary" style="width:100%;justify-content:center;padding:12px" onclick="doLogin()">Sign in →</button>
+    <div style="margin-top:18px;padding:11px;background:var(--s2);border:1px solid var(--border);border-radius:9px;text-align:center;font-size:12px;color:var(--hint)">ops@ · admin@ · lab@checkupify.com · <code style="color:var(--teal-d)">Checkupify@2026</code></div>
+  </div>
+</div>
+
+<div id="app">
+<aside id="sb">
+  <div class="sb-top">
+    <div class="sb-logo">
+      <div class="sb-ic">CK</div>
+      <div><div class="sb-brand-name">Checkupify</div><div class="sb-brand-sub">Operations Console</div></div>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-sect">Overview</div>
+    <div class="sb-item active" data-pg="dashboard" onclick="nav('dashboard',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard
+    </div>
+    <div class="sb-sect">Operations</div>
+    <div class="sb-item" data-pg="appointments" onclick="nav('appointments',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Appointments <span class="sb-badge t" id="nb-apt">0</span>
+    </div>
+    <div class="sb-item" data-pg="digitization" onclick="nav('digitization',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>Digitization <span class="sb-badge a" id="nb-dig">0</span>
+    </div>
+    <div class="sb-sect">Records</div>
+    <div class="sb-item" data-pg="customers" onclick="nav('customers',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Customers (CRM)
+    </div>
+    <div class="sb-item" data-pg="leads" onclick="nav('leads',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Leads
+    </div>
+    <div class="sb-sect">Setup</div>
+    <div class="sb-item" data-pg="system" onclick="nav('system',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/></svg>System Setup
+    </div>
+    <div class="sb-item" data-pg="partner" onclick="nav('partner',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Partner Setup
+    </div>
+    <div class="sb-sect">Business</div>
+    <div class="sb-item" data-pg="finance" onclick="nav('finance',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Finance
+    </div>
+    <div class="sb-item" data-pg="marketing" onclick="nav('marketing',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>Marketing <span class="sb-soon">SOON</span>
+    </div>
+    <div class="sb-item" data-pg="analytics" onclick="nav('analytics',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>Analytics <span class="sb-soon">SOON</span>
+    </div>
+    <div class="sb-item" data-pg="admin" onclick="nav('admin',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2l2.9 2.9M16.9 16.9l2.9 2.9M1 12h4M19 12h4M4.2 19.8l2.9-2.9M16.9 7.1l2.9-2.9"/></svg>Administration <span class="sb-soon">SOON</span>
+    </div>
+  </nav>
+  <div class="sb-user" onclick="doLogout()" title="Sign out">
+    <div class="sb-av" id="u-av">OP</div>
+    <div><div class="sb-uname" id="u-name">Ops Team</div><div class="sb-urole" id="u-role">Operations · Sign out</div></div>
+  </div>
+</aside>
+
+<div id="main">
+  <div id="topbar">
+    <div class="breadcrumb">Checkupify / <b id="bc">Dashboard</b></div>
+    <div class="tb-right">
+      <div class="gsearch">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="gsearch" placeholder="Search appointments, customers…" oninput="globalSearch(this.value)">
+      </div>
+      <div class="icon-btn" onclick="toast('i','Live feed is on the dashboard')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><div class="notif-dot"></div></div>
+    </div>
+  </div>
+  <div id="content">
+
+    <!-- DASHBOARD -->
+    <div class="page show" id="p-dashboard">
+      <div class="phead"><div><div class="ptitle">Operations Dashboard</div><div class="psub">Live view across all bookings, providers and reports</div></div></div>
+      <div class="metrics m6">
+        <div class="mcard clk" onclick="nav('appointments')"><div class="mcard-top" style="background:var(--teal)"></div><div class="mlabel">Total Bookings</div><div class="mval" id="k-total">—</div><div class="msub">All time</div></div>
+        <div class="mcard clk" onclick="goStage('New')"><div class="mcard-top" style="background:#EF4444"></div><div class="mlabel">Awaiting Confirm</div><div class="mval" id="k-new" style="color:var(--red)">—</div><div class="msub">Needs action</div></div>
+        <div class="mcard clk" onclick="goStage('Confirmed')"><div class="mcard-top" style="background:#10B981"></div><div class="mlabel">Confirmed</div><div class="mval" id="k-confirmed" style="color:var(--green)">—</div><div class="msub">Scheduled</div></div>
+        <div class="mcard clk" onclick="nav('digitization')"><div class="mcard-top" style="background:#F59E0B"></div><div class="mlabel">In Digitization</div><div class="mval" id="k-dig" style="color:var(--amber)">—</div><div class="msub">Reports queue</div></div>
+        <div class="mcard clk" onclick="goStage('Reports Received')"><div class="mcard-top" style="background:#6366F1"></div><div class="mlabel">Completed</div><div class="mval" id="k-done">—</div><div class="msub">Reports received</div></div>
+        <div class="mcard"><div class="mcard-top" style="background:var(--teal-d)"></div><div class="mlabel">Gross Revenue</div><div class="mval" id="k-rev" style="font-size:21px">—</div><div class="msub">Confirmed+ value</div></div>
+      </div>
+      <div class="g21">
+        <div class="fcol">
+          <div class="card">
+            <div class="card-head"><span class="card-title">Pipeline by Stage</span><span style="font-size:11px;color:var(--hint)">Live</span></div>
+            <div style="padding:16px"><div class="chartbars" id="stage-chart"></div><div class="clabels" id="stage-labels"></div></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><span class="card-title">Needs Action Now</span><button class="btn sm primary" onclick="nav('appointments')">Go to Operations</button></div>
+            <div class="tw"><table><thead><tr><th>Apt ID</th><th>Patient</th><th>Package</th><th>Stage</th><th>Action</th></tr></thead><tbody id="dash-action"></tbody></table></div>
+          </div>
+        </div>
+        <div class="fcol">
+          <div class="card">
+            <div class="card-head"><span class="card-title">Network Coverage</span></div>
+            <div style="padding:14px 16px;display:flex;flex-direction:column;gap:11px" id="dash-network"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><span class="card-title">Live Activity Feed</span></div>
+            <div style="padding:6px 16px 12px" id="dash-feed"><div class="empty">No recent activity</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- APPOINTMENTS / OPERATIONS -->
+    <div class="page" id="p-appointments">
+      <div class="phead">
+        <div><div class="ptitle">Appointments & Operations</div><div class="psub">Full lifecycle control · override any status with audit trail</div></div>
+        <button class="btn sm" onclick="loadAll().then(()=>{renderAppointments(curAptFilter);toast('s','Refreshed')})">↻ Refresh</button>
+      </div>
+      <div class="card">
+        <div class="tabs" id="apt-tabs">
+          <div class="tab on" data-f="all" onclick="setAptFilter('all',this)">All <span class="tcnt" id="ac-all">0</span></div>
+          <div class="tab" data-f="New" onclick="setAptFilter('New',this)">New <span class="tcnt" id="ac-New">0</span></div>
+          <div class="tab" data-f="Confirmed" onclick="setAptFilter('Confirmed',this)">Confirmed <span class="tcnt" id="ac-Confirmed">0</span></div>
+          <div class="tab" data-f="Report Uploaded" onclick="setAptFilter('Report Uploaded',this)">Report Uploaded <span class="tcnt" id="ac-RU">0</span></div>
+          <div class="tab" data-f="Partially Uploaded" onclick="setAptFilter('Partially Uploaded',this)">Partial <span class="tcnt" id="ac-PU">0</span></div>
+          <div class="tab" data-f="Reports Received" onclick="setAptFilter('Reports Received',this)">Received <span class="tcnt" id="ac-RR">0</span></div>
+          <div class="tab" data-f="Rejected" onclick="setAptFilter('Rejected',this)">Rejected <span class="tcnt" id="ac-Rej">0</span></div>
+        </div>
+        <div class="tw"><table>
+          <thead><tr><th>Apt ID</th><th>Patient</th><th>Package</th><th>Date / Slot</th><th>Type</th><th>Amount</th><th>Stage</th><th style="text-align:right">Actions</th></tr></thead>
+          <tbody id="apt-table"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- DIGITIZATION -->
+    <div class="page" id="p-digitization">
+      <div class="phead"><div><div class="ptitle">Report Digitization & Verification</div><div class="psub">Verify uploaded reports test-by-test before they reach the patient</div></div></div>
+      <div class="alert alert-b"><span>Flow: lab uploads report → <b>First report = Verification Required</b> → verify each test → some done = <b>Partially Received</b> → all checklist filled = <b>Reports Received</b> → invoice can be raised.</span></div>
+      <div class="g21">
+        <div class="card" style="align-self:start">
+          <div class="card-head"><span class="card-title">Verification Queue</span><span class="badge ba" id="dig-count">0</span></div>
+          <div class="tw"><table><thead><tr><th>Apt ID</th><th>Patient</th><th>Stage</th><th>Tests</th></tr></thead><tbody id="dig-table"></tbody></table></div>
+        </div>
+        <div class="card" style="align-self:start" id="dig-panel">
+          <div class="card-head"><span class="card-title">Report Detail</span></div>
+          <div class="empty" id="dig-detail">Select an appointment from the queue to verify its tests.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CUSTOMERS -->
+    <div class="page" id="p-customers">
+      <div class="phead"><div><div class="ptitle">Customers (CRM)</div><div class="psub">Employee / customer 360 — details, bookings and report history</div></div></div>
+      <div class="g21">
+        <div class="card" style="align-self:start">
+          <div class="card-head"><span class="card-title">All Customers</span><span class="badge bt" id="cust-count">0</span></div>
+          <div class="tw"><table><thead><tr><th>Name</th><th>Phone</th><th>City</th><th>Bookings</th></tr></thead><tbody id="cust-table"></tbody></table></div>
+        </div>
+        <div class="card" style="align-self:start">
+          <div class="card-head"><span class="card-title">Customer 360</span></div>
+          <div class="empty" id="cust-detail">Select a customer to view their full profile.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEADS -->
+    <div class="page" id="p-leads">
+      <div class="phead"><div><div class="ptitle">Corporate Leads</div><div class="psub">Sales pipeline for enterprise / SME deals</div></div></div>
+      <div class="card"><div class="tw"><table>
+        <thead><tr><th>Company</th><th>Contact</th><th>Employees</th><th>City</th><th>Source</th><th>Status</th></tr></thead>
+        <tbody id="leads-table"></tbody>
+      </table></div></div>
+    </div>
+
+    <!-- SYSTEM SETUP -->
+    <div class="page" id="p-system">
+      <div class="phead"><div><div class="ptitle">System Setup</div><div class="psub">Companies, packages and the service catalog mapped to the network</div></div></div>
+      <div class="metrics m3">
+        <div class="mcard"><div class="mlabel">Enterprises (Companies)</div><div class="mval" id="ss-ent">—</div></div>
+        <div class="mcard"><div class="mlabel">Active Packages</div><div class="mval" id="ss-pkg">—</div></div>
+        <div class="mcard"><div class="mlabel">Catalog Tests</div><div class="mval" id="ss-tests">—</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Companies</span></div>
+        <div class="tw"><table><thead><tr><th>Company</th><th>Type</th><th>POC</th><th>Contract</th><th>Discount</th><th>Status</th></tr></thead><tbody id="ent-table"></tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Packages (Service Catalog)</span></div>
+        <div class="tw"><table><thead><tr><th>Package</th><th>Category</th><th>Tests</th><th>MRP</th><th>Price</th><th>Status</th></tr></thead><tbody id="pkg-table"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- PARTNER SETUP -->
+    <div class="page" id="p-partner">
+      <div class="phead"><div><div class="ptitle">Partner Setup (Network & Supply)</div><div class="psub">Diagnostic enterprises, branches/providers and facility coverage</div></div></div>
+      <div class="metrics m4">
+        <div class="mcard"><div class="mcard-top" style="background:var(--teal)"></div><div class="mlabel">Active Labs</div><div class="mval" id="ps-labs">—</div></div>
+        <div class="mcard"><div class="mcard-top" style="background:#10B981"></div><div class="mlabel">NABL Certified</div><div class="mval" id="ps-nabl" style="color:var(--green)">—</div></div>
+        <div class="mcard"><div class="mcard-top" style="background:#6366F1"></div><div class="mlabel">Home Collection</div><div class="mval" id="ps-home">—</div></div>
+        <div class="mcard"><div class="mcard-top" style="background:#F59E0B"></div><div class="mlabel">Avg Rating</div><div class="mval" id="ps-rating" style="color:var(--amber)">—</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Provider Network</span></div>
+        <div class="tw"><table><thead><tr><th>Lab / Branch</th><th>City</th><th>Certifications</th><th>Home Collection</th><th>TAT</th><th>Rating</th><th>Status</th></tr></thead><tbody id="labs-table"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- FINANCE -->
+    <div class="page" id="p-finance">
+      <div class="phead"><div><div class="ptitle">Finance</div><div class="psub">Revenue, billing readiness and per-package performance</div></div></div>
+      <div class="metrics m4">
+        <div class="mcard"><div class="mlabel">Gross Booked</div><div class="mval" id="fin-gross" style="font-size:22px">—</div><div class="msub">All bookings</div></div>
+        <div class="mcard"><div class="mlabel">Invoiceable</div><div class="mval" id="fin-inv" style="font-size:22px;color:var(--green)">—</div><div class="msub">Reports received</div></div>
+        <div class="mcard"><div class="mlabel">In Progress</div><div class="mval" id="fin-prog" style="font-size:22px;color:var(--amber)">—</div><div class="msub">Confirmed → digitization</div></div>
+        <div class="mcard"><div class="mlabel">Lost</div><div class="mval" id="fin-lost" style="font-size:22px;color:var(--red)">—</div><div class="msub">Rejected / cancelled</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Revenue by Package</span></div>
+        <div class="tw"><table><thead><tr><th>Package</th><th>Bookings</th><th>Gross Value</th><th>Invoiceable</th></tr></thead><tbody id="fin-table"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- PHASE 2 STUBS -->
+    <div class="page" id="p-marketing"><div class="phead"><div><div class="ptitle">Marketing</div><div class="psub">Campaigns for the patient app & corporate HR portals</div></div></div>
+      <div class="card"><div class="soon-wrap"><span class="soon-badge">PHASE 2</span><div style="font-size:16px;font-weight:700">Campaign Builder</div><div style="max-width:440px;color:var(--muted);font-size:13px">Email / SMS / WhatsApp / push campaigns with audience segmentation and health-risk targeting. Scaffolded next once daily ops are stable — not faked here.</div></div></div></div>
+    <div class="page" id="p-analytics"><div class="phead"><div><div class="ptitle">Analytics</div><div class="psub">Executive, operations, network & finance drill-downs</div></div></div>
+      <div class="card"><div class="soon-wrap"><span class="soon-badge">PHASE 2</span><div style="font-size:16px;font-weight:700">Drill-down Dashboards</div><div style="max-width:440px;color:var(--muted);font-size:13px">The Dashboard already shows live operational KPIs. Deep multi-dimensional analytics come next.</div></div></div></div>
+    <div class="page" id="p-admin"><div class="phead"><div><div class="ptitle">Administration</div><div class="psub">Users, roles, permissions & audit</div></div></div>
+      <div class="card"><div class="soon-wrap"><span class="soon-badge">PHASE 2</span><div style="font-size:16px;font-weight:700">RBAC · SSO · MFA</div><div style="max-width:440px;color:var(--muted);font-size:13px">Role-based access (System Setup / Partner Setup / Operations roles), SSO and MFA. Auth works today via Supabase; granular roles are the next layer.</div></div></div></div>
+
+  </div>
+</div>
+</div>
+
+<!-- OVERRIDE MODAL -->
+<div class="ov" id="ovr-modal" onclick="if(event.target===this)closeMod('ovr-modal')">
+  <div class="modal modal-sm">
+    <div class="mhead"><div><div class="mtitle">Override Status</div><div style="font-size:12px;color:var(--hint);margin-top:3px" id="ovr-sub"></div></div><button class="mclose" onclick="closeMod('ovr-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="iline"><span class="lbl">Current stage</span><span class="badge" id="ovr-cur"></span></div>
+      <div class="fgrp" style="margin-top:14px"><label>Move to stage <span class="req">*</span></label>
+        <select id="ovr-to"></select>
+      </div>
+      <div class="fgrp"><label>Reason for override <span class="req">*</span></label>
+        <textarea id="ovr-reason" style="height:70px;resize:none" placeholder="e.g. Patient called to reschedule; report received via WhatsApp; duplicate booking…"></textarea>
+      </div>
+      <div class="alert alert-a"><span>This change is written to the audit log with your name, timestamp, and reason. The Provider Dashboard updates in real time.</span></div>
+    </div>
+    <div class="mfoot"><button class="btn" onclick="closeMod('ovr-modal')">Cancel</button><button class="btn primary" onclick="doOverride()">Apply Override</button></div>
+  </div>
+</div>
+
+<!-- REJECT MODAL -->
+<div class="ov" id="rej-modal" onclick="if(event.target===this)closeMod('rej-modal')">
+  <div class="modal modal-sm">
+    <div class="mhead"><div><div class="mtitle">Reject Appointment</div><div style="font-size:12px;color:var(--hint);margin-top:3px" id="rej-sub"></div></div><button class="mclose" onclick="closeMod('rej-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="fgrp"><label>Reason <span class="req">*</span></label>
+        <select id="rej-reason">
+          <option value="">Select reason</option>
+          <option>Lab capacity full</option><option>Equipment not available</option>
+          <option>Patient not eligible</option><option>Location not serviceable</option>
+          <option>Requested by patient</option><option>Duplicate booking</option><option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="mfoot"><button class="btn" onclick="closeMod('rej-modal')">Cancel</button><button class="btn danger" onclick="doReject()">Reject</button></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SB=window.supabase.createClient('https://lguoussmsusadvmexjkb.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxndW91c3Ntc3VzYWR2bWV4amtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3Njc1OTcsImV4cCI6MjA5MDM0MzU5N30.Mq6nW2ItZqywuIbVeOUR9HQOglZOL5Wm0uSFwT6hfjw');
+let ACTOR='ops@checkupify.com';
+
+// ── canonical stage list (the override matrix) ──
+const STAGES=['New','Confirmed','In Progress','Report Uploaded','Partially Uploaded','Under Verification','Reports Received','Rejected','No Show','Cancelled'];
+const STAGE_CLR={'New':'bn','Confirmed':'bg','In Progress':'bb','Report Uploaded':'bb','Partially Uploaded':'ba','Under Verification':'bp','Reports Received':'bg','Rejected':'br','No Show':'br','Cancelled':'bgr'};
+const DIG_STAGES=['Report Uploaded','Partially Uploaded','Under Verification'];
+
+// ── live data stores ──
+let BOOKINGS=[],USERS=[],LABS=[],PACKAGES=[],ENTS=[],LEADS=[],RESULTS=[],FEED=[];
+let curAptFilter='all',curDig=null,curCust=null,ovrId=null,rejId=null;
+
+const money=n=>'₹'+Math.round(n||0).toLocaleString('en-IN');
+const dmy=s=>{if(!s)return'—';const d=new Date(s);return isNaN(d)?'—':d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})};
+const stg=b=>b.stage||b.status||'New';
+const pkgName=b=>b._pkg||'Health Package';
+const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function loadAll(){
+  const [bk,us,lb,pk,en,ld,tr]=await Promise.all([
+    SB.from('bookings').select('*,package:packages(name),lab:labs(name,branch_name)').order('created_at',{ascending:false}).limit(800),
+    SB.from('users').select('*').order('created_at',{ascending:false}).limit(500),
+    SB.from('labs').select('*').limit(200),
+    SB.from('packages').select('*').order('sort_order').limit(100),
+    SB.from('enterprises').select('*').limit(100),
+    SB.from('leads').select('*').order('created_at',{ascending:false}).limit(200),
+    SB.from('test_results').select('*').limit(2000)
+  ]);
+  BOOKINGS=(bk.data||[]).map(b=>({...b,_pkg:b.package&&b.package.name,_lab:b.lab&&(b.lab.branch_name||b.lab.name)}));
+  USERS=us.data||[];LABS=lb.data||[];PACKAGES=pk.data||[];ENTS=en.data||[];LEADS=ld.data||[];RESULTS=tr.data||[];
+  const af=await SB.from('ops_audit_log').select('*').order('created_at',{ascending:false}).limit(15);
+  FEED=af.data||[];
+}
+
+// ════════ DASHBOARD ════════
+function cnt(s){return BOOKINGS.filter(b=>stg(b)===s).length}
+function renderDashboard(){
+  const total=BOOKINGS.length;
+  const dig=BOOKINGS.filter(b=>DIG_STAGES.includes(stg(b))).length;
+  const inv=BOOKINGS.filter(b=>['Confirmed','In Progress','Reports Received',...DIG_STAGES].includes(stg(b)));
+  document.getElementById('k-total').textContent=total;
+  document.getElementById('k-new').textContent=cnt('New');
+  document.getElementById('k-confirmed').textContent=cnt('Confirmed');
+  document.getElementById('k-dig').textContent=dig;
+  document.getElementById('k-done').textContent=cnt('Reports Received');
+  document.getElementById('k-rev').textContent=money(inv.reduce((s,b)=>s+(b.amount||0),0));
+  document.getElementById('nb-apt').textContent=cnt('New');
+  document.getElementById('nb-dig').textContent=dig;
+  // stage chart
+  const order=['New','Confirmed','Report Uploaded','Partially Uploaded','Reports Received','Rejected'];
+  const vals=order.map(cnt),max=Math.max(...vals,1);
+  const clrs=['#6366F1','#10B981','#3B82F6','#F59E0B','#00CC8E','#EF4444'];
+  document.getElementById('stage-chart').innerHTML=order.map((s,i)=>`<div class="cbar" title="${s}: ${vals[i]}" style="height:${Math.max(4,Math.round(vals[i]/max*112))}px;background:${clrs[i]}"></div>`).join('');
+  document.getElementById('stage-labels').innerHTML=order.map((s,i)=>`<div class="clbl">${vals[i]}</div>`).join('');
+  // needs action
+  const na=BOOKINGS.filter(b=>stg(b)==='New').slice(0,6);
+  document.getElementById('dash-action').innerHTML=na.length?na.map(b=>`<tr>
+    <td class="mono">${esc(b.id)}</td><td style="font-weight:600">${esc(b.patient_name||'—')}</td>
+    <td style="font-size:12px">${esc(pkgName(b))}</td><td><span class="badge ${STAGE_CLR[stg(b)]}">${stg(b)}</span></td>
+    <td><button class="abt c" onclick="quickConfirm('${b.id}')">Confirm</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty">Nothing awaiting action 🎉</td></tr>';
+  // network
+  const top=LABS.slice(0,5);
+  document.getElementById('dash-network').innerHTML=top.length?top.map(l=>`<div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:600">${esc(l.branch_name||l.name)}</span><span style="color:var(--hint)">${esc(l.city||'')}</span></div>
+    <div class="pbar"><div class="pfill" style="width:${Math.min(100,(l.rating||4)*20)}%;background:var(--teal)"></div></div></div>`).join(''):'<div class="empty">No labs</div>';
+  // feed
+  document.getElementById('dash-feed').innerHTML=FEED.length?FEED.map(f=>{
+    const ic={status_override:['⇄','var(--purplebg)'],confirm:['✓','var(--greenbg)'],reject:['✕','var(--redbg)'],verify:['🔬','var(--bluebg)']}[f.action]||['•','var(--bord2)'];
+    return `<div class="feed-item"><div class="feed-ic" style="background:${ic[1]}">${ic[0]}</div><div><div style="font-weight:600;color:var(--ink)">${esc(f.action.replace('_',' '))} ${f.from_value?`· ${esc(f.from_value)} → ${esc(f.to_value)}`:''}</div><div style="color:var(--hint)">${esc(f.booking_id||'')} · ${esc(f.actor||'')} · ${new Date(f.created_at).toLocaleString('en-IN')}</div>${f.reason?`<div style="color:var(--muted);margin-top:2px">"${esc(f.reason)}"</div>`:''}</div></div>`;
+  }).join(''):'<div class="empty">No recent activity</div>';
+}
+
+// ════════ APPOINTMENTS ════════
+function setAptFilter(f,el){curAptFilter=f;if(el){document.querySelectorAll('#apt-tabs .tab').forEach(t=>t.classList.remove('on'));el.classList.add('on')}renderAppointments(f)}
+function goStage(s){nav('appointments');const tab=document.querySelector(`#apt-tabs .tab[data-f="${s}"]`);setAptFilter(s,tab||document.querySelector('#apt-tabs .tab'))}
+function renderAppointments(f='all'){
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
+  set('ac-all',BOOKINGS.length);set('ac-New',cnt('New'));set('ac-Confirmed',cnt('Confirmed'));
+  set('ac-RU',cnt('Report Uploaded'));set('ac-PU',cnt('Partially Uploaded'));set('ac-RR',cnt('Reports Received'));set('ac-Rej',cnt('Rejected'));
+  let data=f==='all'?BOOKINGS:BOOKINGS.filter(b=>stg(b)===f);
+  const tb=document.getElementById('apt-table');
+  tb.innerHTML=data.length?data.map(b=>`<tr>
+    <td class="mono">${esc(b.id)}</td>
+    <td><div style="font-weight:600">${esc(b.patient_name||'—')}</div><div style="font-size:11px;color:var(--hint)">${esc(b.patient_gender||'')} ${b.patient_age?', '+b.patient_age:''}</div></td>
+    <td style="font-size:12px;max-width:160px">${esc(pkgName(b))}</td>
+    <td><div style="font-size:12px">${dmy(b.appointment_date)}</div><div style="font-size:11px;color:var(--hint)">${esc((b.slot_time||'').slice(0,5))}</div></td>
+    <td><span class="badge bb">${esc(b.collection_type||'In Clinic')}</span></td>
+    <td style="font-weight:600">${money(b.amount)}</td>
+    <td><span class="badge ${STAGE_CLR[stg(b)]||'bgr'}">${stg(b)}</span>${b.rejection_reason?`<div style="font-size:11px;color:var(--red);margin-top:2px">${esc(b.rejection_reason)}</div>`:''}</td>
+    <td style="text-align:right;white-space:nowrap">
+      ${stg(b)==='New'?`<button class="abt c" onclick="quickConfirm('${b.id}')">Confirm</button> <button class="abt r" onclick="openReject('${b.id}','${esc(b.patient_name)}')">Reject</button> `:''}
+      <button class="abt o" onclick="openOverride('${b.id}')">⇄ Override</button>
+    </td></tr>`).join(''):'<tr><td colspan="8" class="empty">No appointments in this view</td></tr>';
+}
+async function quickConfirm(id){
+  const b=BOOKINGS.find(x=>x.id===id);const from=stg(b);
+  const {error}=await SB.from('bookings').update({stage:'Confirmed',status:'confirmed',confirmed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',id);
+  if(error)return toast('e',error.message);
+  await audit(id,'confirm',from,'Confirmed','Confirmed from ops console');
+  toast('s','Appointment confirmed');await refresh();
+}
+function openReject(id,name){rejId=id;document.getElementById('rej-sub').textContent=name+' · '+id;document.getElementById('rej-reason').value='';openMod('rej-modal')}
+async function doReject(){
+  const r=document.getElementById('rej-reason').value;if(!r)return toast('e','Select a reason');
+  const b=BOOKINGS.find(x=>x.id===rejId);const from=stg(b);
+  const {error}=await SB.from('bookings').update({stage:'Rejected',status:'cancelled',rejection_reason:r,updated_at:new Date().toISOString()}).eq('id',rejId);
+  if(error)return toast('e',error.message);
+  await audit(rejId,'reject',from,'Rejected',r);closeMod('rej-modal');toast('e','Appointment rejected');await refresh();
+}
+// ── OVERRIDE MATRIX ──
+function openOverride(id){
+  ovrId=id;const b=BOOKINGS.find(x=>x.id===id);const cur=stg(b);
+  document.getElementById('ovr-sub').textContent=(b.patient_name||'')+' · '+id;
+  const c=document.getElementById('ovr-cur');c.className='badge '+(STAGE_CLR[cur]||'bgr');c.textContent=cur;
+  document.getElementById('ovr-to').innerHTML=STAGES.filter(s=>s!==cur).map(s=>`<option>${s}</option>`).join('');
+  document.getElementById('ovr-reason').value='';openMod('ovr-modal');
+}
+async function doOverride(){
+  const to=document.getElementById('ovr-to').value;const reason=document.getElementById('ovr-reason').value.trim();
+  if(!reason)return toast('e','A reason is required for overrides');
+  const b=BOOKINGS.find(x=>x.id===ovrId);const from=stg(b);
+  const patch={stage:to,updated_at:new Date().toISOString()};
+  if(to==='Confirmed')patch.confirmed_at=new Date().toISOString();
+  if(to==='Rejected'||to==='Cancelled')patch.rejection_reason=reason;
+  const {error}=await SB.from('bookings').update(patch).eq('id',ovrId);
+  if(error)return toast('e',error.message);
+  await audit(ovrId,'status_override',from,to,reason);
+  closeMod('ovr-modal');toast('s',`Overridden: ${from} → ${to}`);await refresh();
+}
+async function audit(id,action,from,to,reason){
+  await SB.from('ops_audit_log').insert({booking_id:id,action,from_value:from,to_value:to,reason,actor:ACTOR});
+}
+
+// ════════ DIGITIZATION ════════
+function renderDigitization(){
+  const q=BOOKINGS.filter(b=>DIG_STAGES.includes(stg(b)));
+  document.getElementById('dig-count').textContent=q.length;
+  document.getElementById('dig-table').innerHTML=q.length?q.map(b=>{
+    const tr=RESULTS.filter(r=>r.booking_id===b.id);
+    return `<tr style="cursor:pointer" onclick="openDig('${b.id}')"><td class="mono">${esc(b.id)}</td><td style="font-weight:600">${esc(b.patient_name||'—')}</td><td><span class="badge ${STAGE_CLR[stg(b)]}">${stg(b)}</span></td><td>${tr.length} tests</td></tr>`;
+  }).join(''):'<tr><td colspan="4" class="empty">Queue empty — no reports awaiting verification</td></tr>';
+}
+function openDig(id){
+  curDig=id;const b=BOOKINGS.find(x=>x.id===id);
+  const tr=RESULTS.filter(r=>r.booking_id===id);
+  const recv=tr.filter(r=>r.vr_status==='received').length;
+  let h=`<div style="padding:14px 16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:15px;font-weight:800">${esc(b.patient_name||'—')}</div><span class="badge ${STAGE_CLR[stg(b)]}">${stg(b)}</span></div>
+    <div style="font-size:12px;color:var(--hint);margin-bottom:14px">${esc(id)} · ${esc(pkgName(b))}</div>`;
+  if(b.report_url)h+=`<a href="${esc(b.report_url)}" target="_blank" class="btn sm" style="margin-bottom:14px">📄 Open report PDF</a>`;
+  if(!tr.length){h+=`<div class="alert alert-a" style="margin-bottom:12px"><span>No test-level rows yet. The lab uploads these from the Provider Dashboard.</span></div>`;}
+  else{
+    h+=`<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:var(--muted);font-weight:600">Verification progress</span><span style="font-weight:700;color:var(--teal-d)">${recv}/${tr.length}</span></div>
+    <div class="pbar" style="margin-bottom:14px"><div class="pfill" style="width:${tr.length?recv/tr.length*100:0}%;background:var(--teal)"></div></div>
+    <div style="display:flex;flex-direction:column;gap:7px">`;
+    tr.forEach(r=>{
+      const vc={received:'bg',issue:'br',pending:'ba'}[r.vr_status||'pending'];
+      h+=`<div style="border:1px solid var(--border);border-radius:8px;padding:9px 11px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><span style="font-size:13px;font-weight:500">${esc(r.test_name)}</span><span class="badge ${vc}">${r.vr_status||'pending'}</span></div>
+        <div style="display:flex;gap:6px"><button class="abt c" onclick="markTest('${r.id}','received')">✓ Received</button><button class="abt r" onclick="markTest('${r.id}','issue')">⚠ Issue</button></div>
+      </div>`;
+    });
+    h+=`</div><div style="display:flex;gap:8px;margin-top:16px"><button class="btn sm" onclick="markAll('${id}')">Mark all received</button><button class="btn sm primary" onclick="finalize('${id}')">Finalize → Reports Received</button></div>`;
+  }
+  h+=`<div style="margin-top:14px"><button class="btn sm o" onclick="openOverride('${id}')" style="background:var(--purplebg);color:var(--purple);border-color:#DDD6FE">⇄ Override status</button></div></div>`;
+  document.getElementById('dig-detail').outerHTML=`<div id="dig-detail">${h}</div>`;
+}
+async function markTest(rid,st){
+  const {error}=await SB.from('test_results').update({vr_status:st,vr_marked_by:ACTOR,vr_marked_at:new Date().toISOString()}).eq('id',rid);
+  if(error)return toast('e',error.message);
+  const r=RESULTS.find(x=>x.id===rid);if(r)r.vr_status=st;
+  toast('s','Test marked '+st);openDig(curDig);
+}
+async function markAll(id){
+  const ids=RESULTS.filter(r=>r.booking_id===id).map(r=>r.id);
+  if(!ids.length)return;
+  await SB.from('test_results').update({vr_status:'received',vr_marked_by:ACTOR,vr_marked_at:new Date().toISOString()}).in('id',ids);
+  RESULTS.forEach(r=>{if(r.booking_id===id)r.vr_status='received'});
+  toast('s','All tests marked received');openDig(id);
+}
+async function finalize(id){
+  const tr=RESULTS.filter(r=>r.booking_id===id);
+  const pending=tr.filter(r=>r.vr_status!=='received'&&r.vr_status!=='issue').length;
+  if(pending)return toast('w',pending+' test(s) still pending verification');
+  const b=BOOKINGS.find(x=>x.id===id);const from=stg(b);
+  const {error}=await SB.from('bookings').update({stage:'Reports Received',status:'completed',completed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',id);
+  if(error)return toast('e',error.message);
+  await audit(id,'verify',from,'Reports Received','All tests verified');
+  toast('s','Finalized — ready to invoice');await refresh();nav('digitization');
+}
+
+// ════════ CUSTOMERS ════════
+function renderCustomers(){
+  document.getElementById('cust-count').textContent=USERS.length;
+  document.getElementById('cust-table').innerHTML=USERS.length?USERS.map(u=>{
+    const n=BOOKINGS.filter(b=>b.user_id===u.id||b.patient_phone===u.phone).length;
+    return `<tr style="cursor:pointer" onclick="openCust('${u.id}')"><td style="font-weight:600">${esc(u.name||'—')}</td><td class="mono" style="color:var(--slate)">${esc(u.phone||'')}</td><td>${esc(u.city||'—')}</td><td>${n}</td></tr>`;
+  }).join(''):'<tr><td colspan="4" class="empty">No customers</td></tr>';
+}
+function openCust(uid){
+  const u=USERS.find(x=>x.id===uid);
+  const bk=BOOKINGS.filter(b=>b.user_id===uid||b.patient_phone===u.phone);
+  const spend=bk.filter(b=>['Reports Received','Confirmed'].includes(stg(b))).reduce((s,b)=>s+(b.amount||0),0);
+  let h=`<div style="padding:14px 16px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div style="width:46px;height:46px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px">${esc((u.name||'?').slice(0,1).toUpperCase())}</div>
+      <div><div style="font-size:16px;font-weight:800">${esc(u.name||'—')}</div><div style="font-size:12px;color:var(--hint)">${esc(u.phone||'')} · ${esc(u.city||'')}</div></div>
+    </div>
+    <div class="iline"><span class="lbl">Email</span><span>${esc(u.email||'—')}</span></div>
+    <div class="iline"><span class="lbl">Gender / DOB</span><span>${esc(u.gender||'—')} ${u.dob?'· '+dmy(u.dob):''}</span></div>
+    <div class="iline"><span class="lbl">Total bookings</span><span style="font-weight:700">${bk.length}</span></div>
+    <div class="iline"><span class="lbl">Lifetime value</span><span style="font-weight:700;color:var(--teal-d)">${money(spend)}</span></div>
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:16px 0 8px">Booking History</div>`;
+  h+=bk.length?bk.map(b=>`<div style="border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:7px;font-size:12px">
+    <div style="display:flex;justify-content:space-between"><span class="mono">${esc(b.id)}</span><span class="badge ${STAGE_CLR[stg(b)]}">${stg(b)}</span></div>
+    <div style="margin-top:3px">${esc(pkgName(b))} · ${dmy(b.appointment_date)}</div></div>`).join(''):'<div class="empty">No bookings yet</div>';
+  h+=`</div>`;
+  document.getElementById('cust-detail').outerHTML=`<div id="cust-detail">${h}</div>`;
+}
+
+// ════════ LEADS / SYSTEM / PARTNER / FINANCE ════════
+function renderLeads(){
+  const sc={new:'bn',contacted:'bb',qualified:'bt',won:'bg',lost:'br'};
+  document.getElementById('leads-table').innerHTML=LEADS.length?LEADS.map(l=>`<tr>
+    <td style="font-weight:600">${esc(l.company_name||'—')}</td><td>${esc(l.contact_name||'')}<div style="font-size:11px;color:var(--hint)">${esc(l.contact_email||'')}</div></td>
+    <td>${esc(l.employee_count||'—')}</td><td>${esc(l.city||'—')}</td><td><span class="badge bgr">${esc(l.source||'—')}</span></td>
+    <td><span class="badge ${sc[(l.status||'').toLowerCase()]||'bgr'}">${esc(l.status||'new')}</span></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No leads</td></tr>';
+}
+function renderSystem(){
+  document.getElementById('ss-ent').textContent=ENTS.length;
+  document.getElementById('ss-pkg').textContent=PACKAGES.filter(p=>p.active!==false).length;
+  document.getElementById('ss-tests').textContent='49';
+  document.getElementById('ent-table').innerHTML=ENTS.length?ENTS.map(e=>`<tr>
+    <td style="font-weight:600">${esc(e.name)}</td><td><span class="badge bb">${esc(e.type||'Corporate')}</span></td>
+    <td>${esc(e.poc_name||'—')}<div style="font-size:11px;color:var(--hint)">${esc(e.poc_email||'')}</div></td>
+    <td style="font-size:12px">${dmy(e.contract_start)} – ${dmy(e.contract_end)}</td>
+    <td>${e.discount_pct?e.discount_pct+'%':'—'}</td><td><span class="badge ${e.active!==false?'bg':'bgr'}">${e.active!==false?'Active':'Inactive'}</span></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No companies yet</td></tr>';
+  document.getElementById('pkg-table').innerHTML=PACKAGES.length?PACKAGES.map(p=>`<tr>
+    <td style="font-weight:600">${esc(p.name)}</td><td><span class="badge bt">${esc(p.category||'General')}</span></td>
+    <td>${p.test_count||0}</td><td style="color:var(--hint);text-decoration:line-through">${money(p.mrp)}</td>
+    <td style="font-weight:700">${money(p.base_price)}</td><td><span class="badge ${p.active!==false?'bg':'bgr'}">${p.active!==false?'Active':'Inactive'}</span></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No packages</td></tr>';
+}
+function renderPartner(){
+  const nabl=LABS.filter(l=>l.nabl_certified).length,home=LABS.filter(l=>l.home_collection).length;
+  const avg=LABS.length?(LABS.reduce((s,l)=>s+(l.rating||0),0)/LABS.length).toFixed(1):'—';
+  document.getElementById('ps-labs').textContent=LABS.length;
+  document.getElementById('ps-nabl').textContent=nabl;
+  document.getElementById('ps-home').textContent=home;
+  document.getElementById('ps-rating').textContent=avg;
+  document.getElementById('labs-table').innerHTML=LABS.length?LABS.map(l=>{
+    const certs=[l.nabl_certified&&'NABL',l.nabh_certified&&'NABH',l.iso_certified&&'ISO'].filter(Boolean);
+    return `<tr><td style="font-weight:600">${esc(l.branch_name||l.name)}<div style="font-size:11px;color:var(--hint)">${esc(l.network_type||'')}</div></td>
+    <td>${esc(l.city||'—')}</td><td>${certs.length?certs.map(c=>`<span class="badge bt" style="margin-right:3px">${c}</span>`).join(''):'<span style="color:var(--hint)">—</span>'}</td>
+    <td>${l.home_collection?'<span class="badge bg">Yes</span>':'<span class="badge bgr">No</span>'}</td>
+    <td>${l.avg_tat_hours?l.avg_tat_hours+'h':'—'}</td><td>⭐ ${l.rating||'—'}</td>
+    <td><span class="badge ${l.active!==false&&l.status!=='inactive'?'bg':'bgr'}">${l.active!==false&&l.status!=='inactive'?'Active':'Inactive'}</span></td></tr>`;
+  }).join(''):'<tr><td colspan="7" class="empty">No labs</td></tr>';
+}
+function renderFinance(){
+  const val=arr=>arr.reduce((s,b)=>s+(b.amount||0),0);
+  const inv=BOOKINGS.filter(b=>stg(b)==='Reports Received');
+  const prog=BOOKINGS.filter(b=>['Confirmed','In Progress',...DIG_STAGES].includes(stg(b)));
+  const lost=BOOKINGS.filter(b=>['Rejected','Cancelled','No Show'].includes(stg(b)));
+  document.getElementById('fin-gross').textContent=money(val(BOOKINGS));
+  document.getElementById('fin-inv').textContent=money(val(inv));
+  document.getElementById('fin-prog').textContent=money(val(prog));
+  document.getElementById('fin-lost').textContent=money(val(lost));
+  const byPkg={};
+  BOOKINGS.forEach(b=>{const k=pkgName(b);byPkg[k]=byPkg[k]||{n:0,gross:0,inv:0};byPkg[k].n++;byPkg[k].gross+=b.amount||0;if(stg(b)==='Reports Received')byPkg[k].inv+=b.amount||0});
+  const rows=Object.entries(byPkg).sort((a,b)=>b[1].gross-a[1].gross);
+  document.getElementById('fin-table').innerHTML=rows.length?rows.map(([k,v])=>`<tr>
+    <td style="font-weight:600">${esc(k)}</td><td>${v.n}</td><td style="font-weight:600">${money(v.gross)}</td>
+    <td style="color:var(--green);font-weight:600">${money(v.inv)}</td></tr>`).join(''):'<tr><td colspan="4" class="empty">No data</td></tr>';
+}
+
+// ════════ NAV ════════
+const TITLES={dashboard:'Dashboard',appointments:'Appointments',digitization:'Digitization',customers:'Customers',leads:'Leads',system:'System Setup',partner:'Partner Setup',finance:'Finance',marketing:'Marketing',analytics:'Analytics',admin:'Administration'};
+function nav(name,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('show'));
+  const pg=document.getElementById('p-'+name);if(pg)pg.classList.add('show');
+  document.getElementById('bc').textContent=TITLES[name]||name;
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.toggle('active',i.dataset.pg===name));
+  if(el===undefined){const it=document.querySelector(`.sb-item[data-pg="${name}"]`);if(it){document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));it.classList.add('active')}}
+  ({dashboard:renderDashboard,appointments:()=>renderAppointments(curAptFilter),digitization:renderDigitization,customers:renderCustomers,leads:renderLeads,system:renderSystem,partner:renderPartner,finance:renderFinance}[name]||(()=>{}))();
+}
+function globalSearch(q){
+  q=q.trim().toLowerCase();if(!q){renderAppointments(curAptFilter);return}
+  nav('appointments');
+  const data=BOOKINGS.filter(b=>(b.id||'').toLowerCase().includes(q)||(b.patient_name||'').toLowerCase().includes(q)||(b.patient_phone||'').includes(q)||(pkgName(b)||'').toLowerCase().includes(q));
+  document.getElementById('apt-table').innerHTML=data.length?data.map(b=>`<tr>
+    <td class="mono">${esc(b.id)}</td><td style="font-weight:600">${esc(b.patient_name||'—')}</td>
+    <td style="font-size:12px">${esc(pkgName(b))}</td><td>${dmy(b.appointment_date)}</td>
+    <td><span class="badge bb">${esc(b.collection_type||'In Clinic')}</span></td><td>${money(b.amount)}</td>
+    <td><span class="badge ${STAGE_CLR[stg(b)]||'bgr'}">${stg(b)}</span></td>
+    <td style="text-align:right"><button class="abt o" onclick="openOverride('${b.id}')">⇄ Override</button></td></tr>`).join(''):`<tr><td colspan="8" class="empty">No matches for "${esc(q)}"</td></tr>`;
+}
+
+// ════════ MODAL / TOAST / AUTH ════════
+function openMod(id){document.getElementById(id).classList.add('open')}
+function closeMod(id){document.getElementById(id).classList.remove('open')}
+function toast(type,msg){
+  const c=document.getElementById('toasts');const t=document.createElement('div');t.className='toast '+type;
+  const ic={s:'✓',e:'✕',i:'ℹ',w:'⚠'};t.innerHTML=`<span style="font-size:15px">${ic[type]||'ℹ'}</span><span style="flex:1">${esc(msg)}</span>`;
+  c.appendChild(t);setTimeout(()=>{t.style.transform='translateX(120%)';t.style.opacity='0';setTimeout(()=>t.remove(),300)},3600);
+}
+async function refresh(){await loadAll();const cur=[...document.querySelectorAll('.page')].find(p=>p.classList.contains('show'));const name=cur?cur.id.replace('p-',''):'dashboard';nav(name);}
+async function boot(){
+  await loadAll();renderDashboard();renderAppointments('all');
+  SB.channel('crm-live').on('postgres_changes',{event:'*',schema:'public',table:'bookings'},async()=>{await loadAll();const cur=[...document.querySelectorAll('.page')].find(p=>p.classList.contains('show'));const n=cur?cur.id.replace('p-',''):'dashboard';nav(n);}).subscribe();
+}
+async function doLogin(){
+  const em=document.getElementById('lg-email').value.trim(),pw=document.getElementById('lg-pass').value;
+  const btn=document.getElementById('lg-btn');btn.disabled=true;btn.textContent='Signing in…';
+  const {data,error}=await SB.auth.signInWithPassword({email:em,password:pw});
+  if(error){document.getElementById('lg-err').textContent=error.message;btn.disabled=false;btn.textContent='Sign in →';return}
+  ACTOR=em;setUser(em);document.getElementById('login-gate').style.display='none';boot();
+}
+async function doLogout(){await SB.auth.signOut();location.reload()}
+function setUser(email){
+  const name=email.split('@')[0];
+  document.getElementById('u-name').textContent=name.charAt(0).toUpperCase()+name.slice(1)+' Team';
+  document.getElementById('u-role').textContent=(name==='admin'?'Administrator':name==='lab'?'Lab Partner':'Operations')+' · Sign out';
+  document.getElementById('u-av').textContent=name.slice(0,2).toUpperCase();
+}
+document.addEventListener('DOMContentLoaded',async()=>{
+  const {data}=await SB.auth.getSession();
+  if(data&&data.session){ACTOR=data.session.user.email;setUser(ACTOR);document.getElementById('login-gate').style.display='none';boot();}
+  else{document.getElementById('login-gate').style.display='flex';}
+});
+</script>
+</body>
+</html>

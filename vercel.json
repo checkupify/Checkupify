@@ -1,1 +1,5 @@
-{"framework":"nextjs","buildCommand":"npm run build","regions":["sin1"]}
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "cleanUrls": true
+}
