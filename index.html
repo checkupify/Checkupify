@@ -434,6 +434,7 @@ tbody tr:hover td{background:#FAFBFC}
         <button data-pt="providers" onclick="partnerSwitch('providers',this)">Provider Network</button>
         <button data-pt="mapping" onclick="partnerSwitch('mapping',this)">Package Mapping Engine</button>
         <button data-pt="facility" onclick="partnerSwitch('facility',this)">Facility Matrix</button>
+        <button data-pt="agreements" onclick="partnerSwitch('agreements',this)">📜 Agreements & Rate Cards</button>
         <button data-pt="match" onclick="partnerSwitch('match',this)">⚡ Match Engine</button>
       </div>
 
@@ -466,6 +467,20 @@ tbody tr:hover td{background:#FAFBFC}
         <div class="card">
           <div class="card-head"><span class="card-title">Provider → Package Offerings</span><span style="font-size:11px;color:var(--hint)">which labs can fulfil which packages, at what cost</span></div>
           <div class="tw"><table><thead><tr><th>Provider</th><th>Package</th><th>Provider Cost</th><th>MRP</th><th>Status</th></tr></thead><tbody id="labpkg-table"></tbody></table></div>
+        </div>
+      </div>
+
+      <div class="subpane" id="pt-agreements">
+        <div class="alert alert-b" style="margin-bottom:12px"><span><b>Credit model (not commission):</b> every test/package in an agreement has a <b>masking ID</b> and an <b>agreed rate</b>. Bookings are sent to the provider on credit at that rate; the provider invoices Checkupify; Finance reconciles & pays.</span></div>
+        <div class="g21">
+          <div class="card" style="align-self:start">
+            <div class="card-head"><span class="card-title">Agreements</span><button class="btn sm primary" onclick="openAgrModal()">+ New Agreement</button></div>
+            <div class="tw"><table><thead><tr><th>Agreement</th><th>Provider</th><th>Terms</th><th>Rate Lines</th><th>Status</th></tr></thead><tbody id="agr-list"></tbody></table></div>
+          </div>
+          <div class="card" style="align-self:start">
+            <div class="card-head"><span class="card-title">Agreement Detail · Rate Card</span></div>
+            <div class="empty" id="agr-detail">Select an agreement to view its masked rate card.</div>
+          </div>
         </div>
       </div>
 
@@ -513,6 +528,15 @@ tbody tr:hover td{background:#FAFBFC}
         <div class="mcard"><div class="mlabel">Invoiceable</div><div class="mval" id="fin-inv" style="font-size:22px;color:var(--green)">—</div><div class="msub">Reports received</div></div>
         <div class="mcard"><div class="mlabel">In Progress</div><div class="mval" id="fin-prog" style="font-size:22px;color:var(--amber)">—</div><div class="msub">Confirmed → digitization</div></div>
         <div class="mcard"><div class="mlabel">Lost</div><div class="mval" id="fin-lost" style="font-size:22px;color:var(--red)">—</div><div class="msub">Rejected / cancelled</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Provider Payables — Credit Ledger</span><button class="btn sm primary" onclick="openPInvModal()">+ Record Provider Invoice</button></div>
+        <div class="alert alert-b" style="margin:12px 14px"><span>What Checkupify <b>owes providers</b> for bookings sent on credit. Entries become payable once the booking reaches <b>Reports Received</b>. Providers invoice you; record, reconcile, approve, pay.</span></div>
+        <div class="tw"><table><thead><tr><th>Provider</th><th>Open Credit</th><th>Payable Now (Reports Received)</th><th>Unrated ⚠</th><th>Invoiced</th><th>Paid</th></tr></thead><tbody id="pay-table"></tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Provider Invoices — Settlement</span><span class="badge bt" id="pinv-count">0</span></div>
+        <div class="tw"><table><thead><tr><th>Ref</th><th>Provider Inv #</th><th>Provider</th><th>Period</th><th>Claimed</th><th>Matched</th><th>Variance</th><th>Status</th><th></th></tr></thead><tbody id="pinv-table"></tbody></table></div>
       </div>
       <div class="card">
         <div class="card-head"><span class="card-title">Ready to Invoice</span><button class="btn sm primary" onclick="generateAllInvoices()">Generate all pending</button></div>
@@ -665,6 +689,66 @@ tbody tr:hover td{background:#FAFBFC}
   </div>
 </div>
 
+<!-- NEW AGREEMENT MODAL -->
+<div class="ov" id="agr-modal" onclick="if(event.target===this)closeMod('agr-modal')">
+  <div class="modal modal-sm">
+    <div class="mhead"><div><div class="mtitle">New Partner Agreement</div><div style="font-size:12px;color:var(--hint);margin-top:3px">Credit-model agreement with a provider</div></div><button class="mclose" onclick="closeMod('agr-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="fgrp"><label>Provider <span class="req">*</span></label><select id="ag-lab"></select></div>
+      <div class="frow f2">
+        <div class="fgrp"><label>Credit terms (days)</label><input id="ag-terms" type="number" value="30"></div>
+        <div class="fgrp"><label>Effective from</label><input id="ag-from" type="date"></div>
+      </div>
+      <div class="fgrp"><label>Effective to (blank = open)</label><input id="ag-to" type="date"></div>
+      <div class="alert alert-b"><span>After creating, add the rate card: each test/package gets a masking ID + agreed rate. Bookings auto-accrue on credit at these rates.</span></div>
+    </div>
+    <div class="mfoot"><button class="btn" onclick="closeMod('agr-modal')">Cancel</button><button class="btn primary" onclick="createAgreement()">Create Agreement</button></div>
+  </div>
+</div>
+
+<!-- ADD RATE LINE MODAL -->
+<div class="ov" id="rate-modal" onclick="if(event.target===this)closeMod('rate-modal')">
+  <div class="modal modal-sm">
+    <div class="mhead"><div><div class="mtitle">Add Rate Line</div><div style="font-size:12px;color:var(--hint);margin-top:3px">Component + masking ID + agreed rate</div></div><button class="mclose" onclick="closeMod('rate-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="frow f2">
+        <div class="fgrp"><label>Type</label><select id="rl-type" onchange="rateItems()"><option value="test">Individual test</option><option value="package">Package</option></select></div>
+        <div class="fgrp"><label>Item</label><select id="rl-item" onchange="rateMaskSuggest()"></select></div>
+      </div>
+      <div class="frow f2">
+        <div class="fgrp"><label>Masking ID <span class="req">*</span></label><input id="rl-mask" style="font-family:monospace"></div>
+        <div class="fgrp"><label>Agreed rate (₹) <span class="req">*</span></label><input id="rl-rate" type="number"></div>
+      </div>
+      <div class="alert alert-a"><span>The masking ID is what the provider sees on bookings — the agreed rate is what you pay them. Existing bookings keep their snapshotted rate.</span></div>
+    </div>
+    <div class="mfoot"><button class="btn" onclick="closeMod('rate-modal')">Cancel</button><button class="btn primary" onclick="addRateLine()">Add Line</button></div>
+  </div>
+</div>
+
+<!-- RECORD PROVIDER INVOICE MODAL -->
+<div class="ov" id="pinv-modal" onclick="if(event.target===this)closeMod('pinv-modal')">
+  <div class="modal modal-md">
+    <div class="mhead"><div><div class="mtitle">Record Provider Invoice</div><div style="font-size:12px;color:var(--hint);margin-top:3px">Reconcile a provider's claim against your credit ledger</div></div><button class="mclose" onclick="closeMod('pinv-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="fgrp"><label>Agreement / Provider <span class="req">*</span></label><select id="pi-agr" onchange="recalcMatch()"></select></div>
+      <div class="frow f2">
+        <div class="fgrp"><label>Period from</label><input id="pi-from" type="date" onchange="recalcMatch()"></div>
+        <div class="fgrp"><label>Period to</label><input id="pi-to" type="date" onchange="recalcMatch()"></div>
+      </div>
+      <div class="frow f2">
+        <div class="fgrp"><label>Provider invoice # <span class="req">*</span></label><input id="pi-no" placeholder="Their invoice number"></div>
+        <div class="fgrp"><label>Claimed amount (₹) <span class="req">*</span></label><input id="pi-claim" type="number" oninput="recalcMatch()"></div>
+      </div>
+      <div class="mini-card" style="background:var(--s2)">
+        <div class="iline"><span class="lbl">Matched from ledger (completed bookings)</span><span style="font-weight:800;color:var(--teal-d)" id="pi-matched">—</span></div>
+        <div class="iline"><span class="lbl">Variance (claimed − matched)</span><span style="font-weight:800" id="pi-var">—</span></div>
+      </div>
+      <div class="alert alert-b" style="margin-top:12px"><span>Saving links the matched ledger entries to this invoice (status → invoiced). Approve, then Mark Paid with the payment reference; entries become paid.</span></div>
+    </div>
+    <div class="mfoot"><button class="btn" onclick="closeMod('pinv-modal')">Cancel</button><button class="btn primary" onclick="savePInv()">Record & Match</button></div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SB=window.supabase.createClient('https://lguoussmsusadvmexjkb.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxndW91c3Ntc3VzYWR2bWV4amtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3Njc1OTcsImV4cCI6MjA5MDM0MzU5N30.Mq6nW2ItZqywuIbVeOUR9HQOglZOL5Wm0uSFwT6hfjw');
@@ -678,6 +762,7 @@ const DIG_STAGES=['Report Uploaded','Partially Uploaded','Under Verification'];
 // ── live data stores ──
 let BOOKINGS=[],USERS=[],LABS=[],PACKAGES=[],ENTS=[],LEADS=[],RESULTS=[],FEED=[];
 let CPKG=[],MASK=[],LABTESTS=[],LABPKG=[],EFAC=[],TESTS=[],AUDIT=[],CINV=[];
+let AGRS=[],RATES=[],LEDGER=[],PINV=[];let curAgr=null;
 let ROLE=null,ROLE_NAME='Staff';
 const ROLE_MODULES={
   ADMIN:['dashboard','appointments','digitization','customers','leads','system','partner','finance','marketing','analytics','admin'],
@@ -724,6 +809,13 @@ async function loadAll(){
   AUDIT=af.data||[];FEED=AUDIT.slice(0,15);
   const ci=await SB.from('customer_invoices').select('*').order('created_at',{ascending:false}).limit(500);
   CINV=ci.data||[];
+  const [ag,rt,cl,pi]=await Promise.all([
+    SB.from('partner_agreements').select('*').order('created_at').limit(300),
+    SB.from('agreement_rates').select('*').limit(2000),
+    SB.from('credit_ledger').select('*').order('accrued_at',{ascending:false}).limit(2000),
+    SB.from('provider_invoices').select('*').order('created_at',{ascending:false}).limit(500)
+  ]);
+  AGRS=ag.data||[];RATES=rt.data||[];LEDGER=cl.data||[];PINV=pi.data||[];
 }
 
 // ════════ DASHBOARD ════════
@@ -1070,6 +1162,85 @@ function renderPartner(){
   partnerSwitch(partnerTab);
   const mp=document.getElementById('me-pkg');
   if(mp&&mp.options.length===0){PACKAGES.forEach(p=>mp.add(new Option(p.name,p.id)))}
+  renderAgreements();
+}
+function testById(id){const t=TESTS.find(x=>x.id===id);return t?t.name:'—'}
+function agrParty(a){return a.lab_id?labById(a.lab_id):(entName(a.enterprise_id)||'—')}
+function renderAgreements(){
+  const tb=document.getElementById('agr-list');if(!tb)return;
+  tb.innerHTML=AGRS.length?AGRS.map(a=>{
+    const n=RATES.filter(r=>r.agreement_id===a.id).length;
+    const sc={active:'bg',draft:'ba',expired:'bgr',terminated:'br'};
+    return `<tr class="clickrow" onclick="openAgr('${a.id}')"><td class="mono">${esc(a.agreement_no)}</td><td style="font-weight:600">${esc(agrParty(a))}</td><td>${a.payment_terms_days}d credit</td><td>${n}</td><td><span class="badge ${sc[a.status]||'bgr'}">${esc(a.status)}</span></td></tr>`;
+  }).join(''):'<tr><td colspan="5" class="empty">No agreements — sign your first partner.</td></tr>';
+}
+function openAgr(id){
+  curAgr=id;const a=AGRS.find(x=>x.id===id);if(!a)return;
+  const lines=RATES.filter(r=>r.agreement_id===id);
+  const led=LEDGER.filter(l=>l.agreement_id===id);
+  const owed=led.filter(l=>l.status==='accrued').reduce((s,l)=>s+(+l.agreed_rate||0),0);
+  let h=`<div style="padding:14px 16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-size:15px;font-weight:800">${esc(a.agreement_no)}</div><span class="badge ${a.status==='active'?'bg':'bgr'}">${esc(a.status)}</span></div>
+    <div style="font-size:12px;color:var(--hint);margin-bottom:12px">${esc(a.title||'')}</div>
+    <div class="kv">
+      <span class="k">Provider</span><span class="v" style="font-weight:700">${esc(agrParty(a))}</span>
+      <span class="k">Credit terms</span><span class="v">${a.payment_terms_days} days</span>
+      <span class="k">Validity</span><span class="v">${dmy(a.effective_from)} – ${a.effective_to?dmy(a.effective_to):'open'}</span>
+      <span class="k">Open credit</span><span class="v" style="font-weight:700;color:var(--amber)">${money(owed)} (${led.filter(l=>l.status==='accrued').length} bookings)</span>
+      <span class="k">Created by</span><span class="v">${esc(a.created_by||'—')}</span>
+    </div>
+    <div class="sect-h">Rate Card (${lines.length} lines, masked) <button class="btn sm" style="padding:3px 9px" onclick="openRateModal('${id}')">+ Add Line</button></div>
+    <div style="max-height:340px;overflow-y:auto">`;
+  h+=lines.length?lines.slice(0,80).map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:6px 0;border-bottom:1px solid var(--bord2)">
+    <div><span class="mono">${esc(r.masking_id)}</span><div style="color:var(--hint)">${r.item_type==='package'?'📦 '+esc(pkgById(r.package_id)):'🧪 '+esc(testById(r.test_id))}</div></div>
+    <div style="text-align:right"><div style="font-weight:700">${money(r.agreed_rate)}</div><span class="badge ${r.active!==false?'bg':'bgr'}" style="font-size:9px">${r.active!==false?'active':'off'}</span></div>
+  </div>`).join(''):'<div style="font-size:12px;color:var(--hint)">No rate lines yet</div>';
+  if(lines.length>80)h+=`<div style="font-size:11px;color:var(--hint);padding:6px 0">…and ${lines.length-80} more lines</div>`;
+  h+=`</div></div>`;
+  document.getElementById('agr-detail').outerHTML=`<div id="agr-detail">${h}</div>`;
+}
+function openAgrModal(){
+  const sel=document.getElementById('ag-lab');sel.innerHTML=LABS.map(l=>`<option value="${l.id}">${esc(l.branch_name||l.name)}</option>`).join('');
+  document.getElementById('ag-terms').value='30';document.getElementById('ag-from').value=new Date().toISOString().slice(0,10);document.getElementById('ag-to').value='';
+  openMod('agr-modal');
+}
+async function createAgreement(){
+  const labId=document.getElementById('ag-lab').value;
+  const rec={lab_id:labId,title:'Diagnostics Services Agreement — '+labById(labId),
+    payment_terms_days:parseInt(document.getElementById('ag-terms').value)||30,
+    effective_from:document.getElementById('ag-from').value||null,
+    effective_to:document.getElementById('ag-to').value||null,
+    status:'active',created_by:ACTOR};
+  const {error}=await SB.from('partner_agreements').insert(rec);
+  if(error)return toast('e',error.message);
+  closeMod('agr-modal');toast('s','Agreement created — now add its rate card');await refresh();
+}
+function rateItems(){
+  const ty=document.getElementById('rl-type').value;
+  const sel=document.getElementById('rl-item');
+  sel.innerHTML=(ty==='package'?PACKAGES.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`):TESTS.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`)).join('');
+  rateMaskSuggest();
+}
+function rateMaskSuggest(){
+  const a=AGRS.find(x=>x.id===curAgr);if(!a)return;
+  const ty=document.getElementById('rl-type').value;
+  const sel=document.getElementById('rl-item');const name=sel.selectedOptions[0]?sel.selectedOptions[0].text:'';
+  const lab=(agrParty(a)||'LAB').replace(/[^A-Za-z]/g,'').slice(0,4).toUpperCase();
+  const item=name.replace(/[^A-Za-z0-9]/g,'').slice(0,10).toUpperCase();
+  document.getElementById('rl-mask').value=lab+(ty==='test'?'-T-':'-')+item;
+}
+function openRateModal(agrId){curAgr=agrId;document.getElementById('rl-type').value='test';rateItems();document.getElementById('rl-rate').value='';openMod('rate-modal')}
+async function addRateLine(){
+  const ty=document.getElementById('rl-type').value;
+  const item=document.getElementById('rl-item').value;
+  const mask=document.getElementById('rl-mask').value.trim();
+  const rate=parseFloat(document.getElementById('rl-rate').value);
+  if(!mask||!rate)return toast('e','Masking ID and agreed rate are required');
+  const rec={agreement_id:curAgr,item_type:ty,masking_id:mask,agreed_rate:rate,active:true};
+  if(ty==='package')rec.package_id=item;else rec.test_id=item;
+  const {error}=await SB.from('agreement_rates').insert(rec);
+  if(error)return toast('e',error.message);
+  closeMod('rate-modal');toast('s','Rate line added: '+mask+' @ ₹'+rate);await refresh();openAgr(curAgr);
 }
 async function runMatch(){
   const pkgId=document.getElementById('me-pkg').value;
@@ -1247,6 +1418,7 @@ function renderFinance(){
       <button class="abt u" onclick="viewInvoice('${i.id}')">View</button>
       ${i.status==='raised'?`<button class="abt c" onclick="markInvoicePaid('${i.id}')">Mark Paid</button>`:''}
     </td></tr>`).join(''):'<tr><td colspan="7" class="empty">No invoices yet</td></tr>';
+  renderPayables();
 }
 // ── Invoice actions ──
 function buildInvoiceRec(b){
@@ -1305,6 +1477,100 @@ function viewInvoice(id){
   document.getElementById('drawer-actions').innerHTML='';
   document.getElementById('drawer-body').innerHTML=h;
   openDrawer();
+}
+// ── Provider Payables & Settlement (credit model) ──
+function bookingStage(id){const b=BOOKINGS.find(x=>x.id===id);return b?stg(b):null}
+function renderPayables(){
+  const pt=document.getElementById('pay-table');if(!pt)return;
+  const byLab={};
+  LEDGER.forEach(l=>{
+    const k=l.lab_id||'?';byLab[k]=byLab[k]||{accrued:0,acN:0,payable:0,pyN:0,unrated:0,invoiced:0,paid:0};
+    const v=+l.agreed_rate||0;
+    if(l.status==='accrued'){byLab[k].accrued+=v;byLab[k].acN++;
+      if(bookingStage(l.booking_id)==='Reports Received'){byLab[k].payable+=v;byLab[k].pyN++}}
+    if(l.status==='unrated')byLab[k].unrated++;
+    if(l.status==='invoiced')byLab[k].invoiced+=v;
+    if(l.status==='paid')byLab[k].paid+=v;
+  });
+  const rows=Object.entries(byLab);
+  pt.innerHTML=rows.length?rows.map(([k,v])=>`<tr>
+    <td style="font-weight:600">${esc(labById(k))}</td>
+    <td>${money(v.accrued)} <span style="font-size:11px;color:var(--hint)">(${v.acN})</span></td>
+    <td style="font-weight:700;color:var(--teal-d)">${money(v.payable)} <span style="font-size:11px;color:var(--hint)">(${v.pyN})</span></td>
+    <td>${v.unrated?`<span class="badge ba">${v.unrated} unrated</span>`:'—'}</td>
+    <td>${money(v.invoiced)}</td><td style="color:var(--green)">${money(v.paid)}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">No credit entries yet</td></tr>';
+  const pc=document.getElementById('pinv-count');if(pc)pc.textContent=PINV.length;
+  const it=document.getElementById('pinv-table');if(!it)return;
+  const sc={submitted:'bb',approved:'bt',disputed:'br',paid:'bg'};
+  it.innerHTML=PINV.length?PINV.map(i=>`<tr>
+    <td class="mono">${esc(i.internal_ref)}</td><td>${esc(i.provider_invoice_no)}</td>
+    <td style="font-weight:600">${esc(labById(i.lab_id))}</td>
+    <td style="font-size:12px">${dmy(i.period_from)} – ${dmy(i.period_to)}</td>
+    <td style="font-weight:600">${money(i.claimed_amount)}</td><td>${money(i.matched_amount)}</td>
+    <td style="color:${Math.abs(i.variance)>0.5?'var(--red)':'var(--green)'};font-weight:700">${money(i.variance)}</td>
+    <td><span class="badge ${sc[i.status]||'bgr'}">${esc(i.status)}</span></td>
+    <td style="text-align:right;white-space:nowrap">
+      ${i.status==='submitted'?`<button class="abt c" onclick="approvePInv('${i.id}')">Approve</button> <button class="abt r" onclick="disputePInv('${i.id}')">Dispute</button>`:''}
+      ${i.status==='approved'?`<button class="abt u" onclick="payPInv('${i.id}')">Mark Paid</button>`:''}
+    </td></tr>`).join(''):'<tr><td colspan="9" class="empty">No provider invoices recorded yet</td></tr>';
+}
+function eligibleEntries(agrId,from,to){
+  return LEDGER.filter(l=>l.agreement_id===agrId&&l.status==='accrued'
+    &&bookingStage(l.booking_id)==='Reports Received'
+    &&(!from||l.accrued_at>=from)&&(!to||l.accrued_at<=to+'T23:59:59'));
+}
+function openPInvModal(){
+  const sel=document.getElementById('pi-agr');
+  sel.innerHTML=AGRS.filter(a=>a.status==='active').map(a=>`<option value="${a.id}">${esc(a.agreement_no)} — ${esc(agrParty(a))}</option>`).join('');
+  const d=new Date();const from=new Date(d.getFullYear(),d.getMonth()-3,1).toISOString().slice(0,10);
+  document.getElementById('pi-from').value=from;
+  document.getElementById('pi-to').value=d.toISOString().slice(0,10);
+  document.getElementById('pi-no').value='';document.getElementById('pi-claim').value='';
+  recalcMatch();openMod('pinv-modal');
+}
+function recalcMatch(){
+  const agrId=document.getElementById('pi-agr').value;
+  const from=document.getElementById('pi-from').value,to=document.getElementById('pi-to').value;
+  const el=eligibleEntries(agrId,from,to);
+  const matched=el.reduce((s,l)=>s+(+l.agreed_rate||0),0);
+  const claim=parseFloat(document.getElementById('pi-claim').value)||0;
+  document.getElementById('pi-matched').textContent=money(matched)+' ('+el.length+' completed bookings)';
+  const v=document.getElementById('pi-var');v.textContent=money(claim-matched);
+  v.style.color=Math.abs(claim-matched)>0.5?'var(--red)':'var(--green)';
+}
+async function savePInv(){
+  const agrId=document.getElementById('pi-agr').value;
+  const a=AGRS.find(x=>x.id===agrId);
+  const no=document.getElementById('pi-no').value.trim();
+  const claim=parseFloat(document.getElementById('pi-claim').value);
+  if(!no||!claim)return toast('e','Provider invoice number and claimed amount are required');
+  const from=document.getElementById('pi-from').value,to=document.getElementById('pi-to').value;
+  const el=eligibleEntries(agrId,from,to);
+  const matched=el.reduce((s,l)=>s+(+l.agreed_rate||0),0);
+  const due=new Date(Date.now()+(a?a.payment_terms_days:30)*86400000).toISOString().slice(0,10);
+  const {data,error}=await SB.from('provider_invoices').insert({
+    provider_invoice_no:no,agreement_id:agrId,lab_id:a?a.lab_id:null,
+    period_from:from||null,period_to:to||null,claimed_amount:claim,
+    matched_amount:matched,variance:claim-matched,status:'submitted',
+    due_date:due,submitted_by:ACTOR}).select().single();
+  if(error)return toast('e',error.message);
+  if(el.length){await SB.from('credit_ledger').update({status:'invoiced',provider_invoice_id:data.id,updated_at:new Date().toISOString()}).in('id',el.map(x=>x.id));}
+  closeMod('pinv-modal');toast('s','Provider invoice recorded — '+el.length+' ledger entries matched');await refresh();
+}
+async function approvePInv(id){
+  const {error}=await SB.from('provider_invoices').update({status:'approved',approved_by:ACTOR}).eq('id',id);
+  if(error)return toast('e',error.message);toast('s','Invoice approved for payment');await refresh();
+}
+async function disputePInv(id){
+  const {error}=await SB.from('provider_invoices').update({status:'disputed'}).eq('id',id);
+  if(error)return toast('e',error.message);toast('w','Invoice marked disputed');await refresh();
+}
+async function payPInv(id){
+  const ref=prompt('Payment reference (UTR / NEFT ref):');if(!ref)return;
+  const {error}=await SB.from('provider_invoices').update({status:'paid',paid_at:new Date().toISOString(),payment_ref:ref}).eq('id',id);
+  if(error)return toast('e',error.message);
+  await SB.from('credit_ledger').update({status:'paid',updated_at:new Date().toISOString()}).eq('provider_invoice_id',id);
+  toast('s','Paid · ref '+ref);await refresh();
 }
 // ── Admin: staff & roles ──
 async function renderAdmin(){
