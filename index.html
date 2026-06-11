@@ -1002,10 +1002,14 @@ function dmy(s){ if(!s) return '—'; const d=new Date(s); return d.toLocaleDate
 function minsLeft(created){ const ms=new Date(created).getTime()+7200000-Date.now(); return Math.max(0,Math.round(ms/60000)) }
 
 async function loadData(){
-  // bookings + package name
-  const { data:bk } = await SB.from('bookings')
-    .select('*,package:packages(name)')
-    .order('created_at',{ascending:false}).limit(500)
+  // resolve MY lab first — everything below is scoped to this provider only
+  const uid = SESSION && SESSION.user ? SESSION.user.id : null
+  const { data:allLabs } = await SB.from('labs').select('id,name,branch_name,user_id').limit(100)
+  MY_LAB = (allLabs||[]).find(l=>uid && l.user_id===uid) || (allLabs||[]).find(l=>(l.name||'').includes('HealthFirst')) || (allLabs||[])[0] || null
+  // bookings + package name — ONLY this lab's bookings
+  let bq = SB.from('bookings').select('*,package:packages(name)').order('created_at',{ascending:false}).limit(500)
+  if(MY_LAB) bq = bq.eq('lab_id', MY_LAB.id)
+  const { data:bk } = await bq
   const rows = bk||[]
   const pkgName = b => (b.package && b.package.name) ? b.package.name : 'Health Package'
 
@@ -1037,9 +1041,7 @@ async function loadData(){
   // PKG_DATA from packages
   const { data:pk } = await SB.from('packages').select('id,name,slug,base_price,mrp,test_count').order('sort_order').limit(50)
   // ── Credit model: resolve MY lab, its agreement, rate card, ledger, invoices ──
-  const uid = SESSION && SESSION.user ? SESSION.user.id : null
-  const { data:allLabs } = await SB.from('labs').select('id,name,branch_name,user_id').limit(100)
-  MY_LAB = (allLabs||[]).find(l=>uid && l.user_id===uid) || (allLabs||[]).find(l=>(l.name||'').includes('HealthFirst')) || (allLabs||[])[0] || null
+  // MY_LAB already resolved at top of loadData (appointments are scoped to it)
   if(MY_LAB){
     const { data:ag } = await SB.from('partner_agreements').select('*').eq('lab_id',MY_LAB.id).eq('status','active').limit(1)
     AGR = (ag&&ag[0])||null
@@ -1595,6 +1597,7 @@ async function boot(){
     .subscribe()
   // new-booking toast
   SB.channel('pd-new').on('postgres_changes',{event:'INSERT',schema:'public',table:'bookings'},p=>{
+    if(MY_LAB && p.new.lab_id !== MY_LAB.id) return
     toast('i','New booking: '+(p.new.patient_name||'patient')+' — Confirm within 2hrs')
   }).subscribe()
 }
