@@ -409,11 +409,21 @@ tbody tr:hover td{background:#FAFBFC}
       </div>
       <div class="card">
         <div class="card-head"><span class="card-title">Companies</span></div>
-        <div class="tw"><table><thead><tr><th>Company</th><th>Type</th><th>POC</th><th>Contract</th><th>Discount</th><th>Status</th></tr></thead><tbody id="ent-table"></tbody></table></div>
+        <div class="tw"><table><thead><tr><th>Company</th><th>Type</th><th>POC</th><th>Contract</th><th>Discount</th><th>Onboarding</th><th>Status</th></tr></thead><tbody id="ent-table"></tbody></table></div>
       </div>
       <div class="card">
         <div class="card-head"><span class="card-title">Packages (Service Catalog)</span></div>
         <div class="tw"><table><thead><tr><th>Package</th><th>Category</th><th>Tests</th><th>MRP</th><th>Price</th><th>Status</th></tr></thead><tbody id="pkg-table"></tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Employee Roster (Eligibility)</span>
+          <div class="card-acts">
+            <select id="ros-ent" onchange="renderRoster()" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit"></select>
+            <button class="btn sm primary" onclick="openRosterModal()">⬆ Bulk Upload Roster</button>
+          </div>
+        </div>
+        <div class="alert alert-b" style="margin:12px 14px"><span>The eligibility backbone: upload employees with <b>grades</b>; the moment an employee logs into the patient app with their phone, they're recognized and see only their grade's plan.</span></div>
+        <div class="tw"><table><thead><tr><th>Employee</th><th>Code</th><th>Grade</th><th>Phone</th><th>City</th></tr></thead><tbody id="roster-table"></tbody></table></div>
       </div>
     </div>
 
@@ -435,6 +445,7 @@ tbody tr:hover td{background:#FAFBFC}
         <button data-pt="mapping" onclick="partnerSwitch('mapping',this)">Package Mapping Engine</button>
         <button data-pt="facility" onclick="partnerSwitch('facility',this)">Facility Matrix</button>
         <button data-pt="agreements" onclick="partnerSwitch('agreements',this)">📜 Agreements & Rate Cards</button>
+        <button data-pt="disruptions" onclick="partnerSwitch('disruptions',this)">🚨 Disruptions</button>
         <button data-pt="match" onclick="partnerSwitch('match',this)">⚡ Match Engine</button>
       </div>
 
@@ -462,7 +473,7 @@ tbody tr:hover td{background:#FAFBFC}
         <div class="card" style="margin-bottom:16px">
           <div class="card-head"><span class="card-title">Company → Package Mapping</span><button class="btn sm primary" onclick="openCpkgModal()">+ Map Package to Company</button></div>
           <div class="alert alert-b" style="margin:12px 14px"><span>This is what an employee sees in the patient app: a package is bookable by a company's staff only if it's mapped here, at the negotiated employee price.</span></div>
-          <div class="tw"><table><thead><tr><th>Company</th><th>Package</th><th>Employee Price</th><th>Annual Limit</th><th>Status</th><th></th></tr></thead><tbody id="cpkg-table"></tbody></table></div>
+          <div class="tw"><table><thead><tr><th>Company</th><th>Package</th><th>Grade</th><th>Employee Price</th><th>Annual Limit</th><th>Status</th><th></th></tr></thead><tbody id="cpkg-table"></tbody></table></div>
         </div>
         <div class="card">
           <div class="card-head"><span class="card-title">Provider → Package Offerings</span><span style="font-size:11px;color:var(--hint)">which labs can fulfil which packages, at what cost</span></div>
@@ -481,6 +492,14 @@ tbody tr:hover td{background:#FAFBFC}
             <div class="card-head"><span class="card-title">Agreement Detail · Rate Card</span></div>
             <div class="empty" id="agr-detail">Select an agreement to view its masked rate card.</div>
           </div>
+        </div>
+      </div>
+
+      <div class="subpane" id="pt-disruptions">
+        <div class="card">
+          <div class="card-head"><span class="card-title">Provider Disruptions</span><button class="btn sm danger" onclick="openDisrModal()">🚨 Declare Disruption</button></div>
+          <div class="alert alert-a" style="margin:12px 14px"><span>An <b>active</b> disruption instantly removes the provider from the match engine (score → 0) and hides it from the patient app's lab list. Resolve it to restore the provider.</span></div>
+          <div class="tw"><table><thead><tr><th>Provider</th><th>Type</th><th>Reason</th><th>Window</th><th>Status</th><th></th></tr></thead><tbody id="disr-table"></tbody></table></div>
         </div>
       </div>
 
@@ -681,11 +700,47 @@ tbody tr:hover td{background:#FAFBFC}
       <div class="fgrp"><label>Company <span class="req">*</span></label><select id="cp-ent"></select></div>
       <div class="fgrp"><label>Package <span class="req">*</span></label><select id="cp-pkg" onchange="cpkgSync()"></select></div>
       <div class="frow f2">
-        <div class="fgrp"><label>Employee price (₹)</label><input id="cp-price" type="number"></div>
+        <div class="fgrp"><label>Employee grade</label><input id="cp-grade" list="grade-opts" placeholder="blank = all grades"><datalist id="grade-opts"></datalist></div>
         <div class="fgrp"><label>Annual limit</label><input id="cp-limit" type="number" value="2"></div>
       </div>
+      <div class="fgrp"><label>Employee price (₹)</label><input id="cp-price" type="number"></div>
     </div>
     <div class="mfoot"><button class="btn" onclick="closeMod('cpkg-modal')">Cancel</button><button class="btn primary" onclick="mapCompanyPackage()">Map Package</button></div>
+  </div>
+</div>
+
+<!-- ROSTER UPLOAD MODAL -->
+<div class="ov" id="roster-modal" onclick="if(event.target===this)closeMod('roster-modal')">
+  <div class="modal modal-md">
+    <div class="mhead"><div><div class="mtitle">Bulk Upload Employee Roster</div><div style="font-size:12px;color:var(--hint);margin-top:3px">Paste from Excel/Sheets — employees are recognized instantly in the patient app</div></div><button class="mclose" onclick="closeMod('roster-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="fgrp"><label>Company <span class="req">*</span></label><select id="ru-ent"></select></div>
+      <div class="fgrp"><label>Roster — one employee per line: <code>Name, Phone, Grade, Email, City</code></label>
+        <textarea id="ru-csv" style="height:160px;font-family:monospace;font-size:12px" placeholder="Rahul Verma, 9876500001, E1, rahul@corp.com, Hyderabad
+Sneha Iyer, 9876500002, M1
+Vikram Singh, 9876500003, E2, , Bangalore" oninput="rosterPreview()"></textarea>
+      </div>
+      <div id="ru-preview" style="font-size:12px;color:var(--teal-d);font-weight:600;min-height:16px"></div>
+      <div class="alert alert-b"><span>Phones are normalized to +91. Existing phones are <b>updated</b> (company/grade), new ones created. The employee logs in with their phone → sees their grade's plan.</span></div>
+    </div>
+    <div class="mfoot"><button class="btn" onclick="closeMod('roster-modal')">Cancel</button><button class="btn primary" onclick="uploadRoster()">Upload Roster</button></div>
+  </div>
+</div>
+
+<!-- DECLARE DISRUPTION MODAL -->
+<div class="ov" id="disr-modal" onclick="if(event.target===this)closeMod('disr-modal')">
+  <div class="modal modal-sm">
+    <div class="mhead"><div><div class="mtitle">Declare Disruption</div><div style="font-size:12px;color:var(--hint);margin-top:3px">Takes the provider out of rotation immediately</div></div><button class="mclose" onclick="closeMod('disr-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="fgrp"><label>Provider <span class="req">*</span></label><select id="dr-lab"></select></div>
+      <div class="fgrp"><label>Type</label><select id="dr-type"><option value="equipment">Equipment down</option><option value="staff">Staff / doctor leave</option><option value="capacity">Reduced capacity</option><option value="closure">Branch closure</option></select></div>
+      <div class="fgrp"><label>Reason</label><input id="dr-reason" placeholder="e.g. CBC analyzer breakdown"></div>
+      <div class="frow f2">
+        <div class="fgrp"><label>From</label><input id="dr-from" type="date"></div>
+        <div class="fgrp"><label>To (blank = until resolved)</label><input id="dr-to" type="date"></div>
+      </div>
+    </div>
+    <div class="mfoot"><button class="btn" onclick="closeMod('disr-modal')">Cancel</button><button class="btn danger" onclick="declareDisruption()">Declare Disruption</button></div>
   </div>
 </div>
 
@@ -763,6 +818,11 @@ const DIG_STAGES=['Report Uploaded','Partially Uploaded','Under Verification'];
 let BOOKINGS=[],USERS=[],LABS=[],PACKAGES=[],ENTS=[],LEADS=[],RESULTS=[],FEED=[];
 let CPKG=[],MASK=[],LABTESTS=[],LABPKG=[],EFAC=[],TESTS=[],AUDIT=[],CINV=[];
 let AGRS=[],RATES=[],LEDGER=[],PINV=[];let curAgr=null;
+let EDOCS=[],DISR=[];
+const GRADE_OPTS=['E1','E2','E3','M1','M2','L1','L2'];
+const STAGE_FLOW=['prospect','docs','rates','test','live'];
+const STAGE_LBL={prospect:'Prospect',docs:'Docs Collection',rates:'Rate Card',test:'Test Booking',live:'LIVE'};
+const DOC_TYPES=[['mou','MOU (signed)'],['pan','PAN Card'],['gst','GST Certificate'],['cancelled_cheque','Cancelled Cheque']];
 let ROLE=null,ROLE_NAME='Staff';
 const ROLE_MODULES={
   ADMIN:['dashboard','appointments','digitization','customers','leads','system','partner','finance','marketing','analytics','admin'],
@@ -816,6 +876,11 @@ async function loadAll(){
     SB.from('provider_invoices').select('*').order('created_at',{ascending:false}).limit(500)
   ]);
   AGRS=ag.data||[];RATES=rt.data||[];LEDGER=cl.data||[];PINV=pi.data||[];
+  const [ed,dr]=await Promise.all([
+    SB.from('enterprise_documents').select('*').limit(1000),
+    SB.from('provider_disruptions').select('*').order('created_at',{ascending:false}).limit(300)
+  ]);
+  EDOCS=ed.data||[];DISR=dr.data||[];
 }
 
 // ════════ DASHBOARD ════════
@@ -1111,11 +1176,15 @@ function renderSystem(){
   document.getElementById('ss-ent').textContent=ENTS.length;
   document.getElementById('ss-pkg').textContent=PACKAGES.filter(p=>p.active!==false).length;
   document.getElementById('ss-tests').textContent='49';
+  const stB=st=>`<span class="badge ${st==='live'?'bg':st==='prospect'?'bgr':'ba'}">${STAGE_LBL[st]||st||'—'}</span>`;
   document.getElementById('ent-table').innerHTML=ENTS.length?ENTS.map(e=>`<tr>
     <td style="font-weight:600">${esc(e.name)}</td><td><span class="badge bb">${esc(e.type||'Corporate')}</span></td>
     <td>${esc(e.poc_name||'—')}<div style="font-size:11px;color:var(--hint)">${esc(e.poc_email||'')}</div></td>
     <td style="font-size:12px">${dmy(e.contract_start)} – ${dmy(e.contract_end)}</td>
-    <td>${e.discount_pct?e.discount_pct+'%':'—'}</td><td><span class="badge ${e.active!==false?'bg':'bgr'}">${e.active!==false?'Active':'Inactive'}</span></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No companies yet</td></tr>';
+    <td>${e.discount_pct?e.discount_pct+'%':'—'}</td><td>${stB(e.onboarding_stage)}</td><td><span class="badge ${e.active!==false?'bg':'bgr'}">${e.active!==false?'Active':'Inactive'}</span></td></tr>`).join(''):'<tr><td colspan="7" class="empty">No companies yet</td></tr>';
+  const rsel=document.getElementById('ros-ent');
+  if(rsel&&rsel.options.length===0){ENTS.forEach(e=>rsel.add(new Option(e.name,e.id)))}
+  renderRoster();
   document.getElementById('pkg-table').innerHTML=PACKAGES.length?PACKAGES.map(p=>`<tr>
     <td style="font-weight:600">${esc(p.name)}</td><td><span class="badge bt">${esc(p.category||'General')}</span></td>
     <td>${p.test_count||0}</td><td style="color:var(--hint);text-decoration:line-through">${money(p.mrp)}</td>
@@ -1124,6 +1193,45 @@ function renderSystem(){
 function partnerSwitch(t,el){partnerTab=t;document.querySelectorAll('#p-partner .seg button').forEach(b=>b.classList.toggle('on',b.dataset.pt===t));document.querySelectorAll('#p-partner .subpane').forEach(p=>p.classList.toggle('show',p.id==='pt-'+t));}
 function pkgById(id){const p=PACKAGES.find(x=>x.id===id);return p?p.name:'—'}
 function labById(id){const l=LABS.find(x=>x.id===id);return l?(l.branch_name||l.name):'—'}
+function renderRoster(){
+  const tb=document.getElementById('roster-table');if(!tb)return;
+  const eid=document.getElementById('ros-ent')?.value;
+  const list=USERS.filter(u=>u.enterprise_id===eid);
+  tb.innerHTML=list.length?list.map(u=>`<tr>
+    <td style="font-weight:600">${esc(u.name||'—')}</td><td class="mono">${esc(u.employee_code||'—')}</td>
+    <td>${u.grade?`<span class="badge bp">${esc(u.grade)}</span>`:'<span style="color:var(--hint)">—</span>'}</td>
+    <td class="mono" style="color:var(--slate)">${esc(u.phone||'')}</td><td>${esc(u.city||'—')}</td></tr>`).join(''):'<tr><td colspan="5" class="empty">No employees on this roster yet — bulk upload to begin.</td></tr>';
+}
+function openRosterModal(){
+  const sel=document.getElementById('ru-ent');sel.innerHTML=ENTS.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  const cur=document.getElementById('ros-ent')?.value;if(cur)sel.value=cur;
+  document.getElementById('ru-csv').value='';document.getElementById('ru-preview').textContent='';
+  openMod('roster-modal');
+}
+function rosterParse(){
+  const txt=document.getElementById('ru-csv').value.trim();
+  if(!txt)return [];
+  return txt.split('\n').map(l=>l.split(',').map(x=>x.trim())).filter(p=>p[0]&&p[1]).map(p=>{
+    let ph=p[1].replace(/[^0-9]/g,'');ph='+91'+ph.slice(-10);
+    return {name:p[0],phone:ph,grade:(p[2]||'').toUpperCase()||null,email:p[3]||'',city:p[4]||''};
+  });
+}
+function rosterPreview(){
+  const rows=rosterParse();
+  document.getElementById('ru-preview').textContent=rows.length?rows.length+' employees parsed · grades: '+[...new Set(rows.map(r=>r.grade||'—'))].join(', '):'';
+}
+async function uploadRoster(){
+  const eid=document.getElementById('ru-ent').value;
+  const rows=rosterParse();
+  if(!rows.length)return toast('e','Paste at least one line: Name, Phone, Grade');
+  const base=USERS.length;
+  const recs=rows.map((r,i)=>({phone:r.phone,name:r.name,email:r.email,city:r.city,gender:'',
+    enterprise_id:eid,grade:r.grade,employee_code:'EMP'+String(1000+base+i)}));
+  const {error}=await SB.from('users').upsert(recs,{onConflict:'phone'});
+  if(error)return toast('e',error.message);
+  closeMod('roster-modal');toast('s',rows.length+' employees added/updated on the roster');
+  await refresh();nav('system');
+}
 function renderPartner(){
   document.getElementById('ps-ents').textContent=ENTS.length;
   document.getElementById('ps-labs').textContent=LABS.length;
@@ -1147,6 +1255,7 @@ function renderPartner(){
   // Company-package mapping
   document.getElementById('cpkg-table').innerHTML=CPKG.length?CPKG.map(c=>`<tr>
     <td style="font-weight:600">${esc(entName(c.enterprise_id)||'—')}</td><td>${esc(pkgById(c.package_id))}</td>
+    <td>${c.grade?`<span class="badge bp">${esc(c.grade)}</span>`:'<span class="badge bgr">All</span>'}</td>
     <td style="font-weight:700;color:var(--teal-d)">${money(c.employee_price)}</td><td>${c.annual_limit||'—'}</td>
     <td><span class="badge ${c.active!==false?'bg':'bgr'}">${c.active!==false?'Active':'Inactive'}</span></td>
     <td style="text-align:right"><button class="abt r" onclick="unmapCpkg('${c.id}')">Remove</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No mappings yet</td></tr>';
@@ -1163,6 +1272,68 @@ function renderPartner(){
   const mp=document.getElementById('me-pkg');
   if(mp&&mp.options.length===0){PACKAGES.forEach(p=>mp.add(new Option(p.name,p.id)))}
   renderAgreements();
+  renderDisruptions();
+}
+function renderDisruptions(){
+  const tb=document.getElementById('disr-table');if(!tb)return;
+  tb.innerHTML=DISR.length?DISR.map(d=>{
+    const active=d.status==='active';
+    return `<tr style="${active?'background:var(--redbg)':''}">
+      <td style="font-weight:600">${esc(labById(d.lab_id))}</td>
+      <td><span class="badge ${active?'br':'bgr'}">${esc(d.dtype)}</span></td>
+      <td style="font-size:12px">${esc(d.reason||'—')}</td>
+      <td style="font-size:12px">${dmy(d.from_date)} – ${d.to_date?dmy(d.to_date):'open'}</td>
+      <td><span class="badge ${active?'br':'bg'}">${active?'ACTIVE':'Resolved'}</span></td>
+      <td style="text-align:right">${active?`<button class="abt c" onclick="resolveDisruption('${d.id}')">Resolve</button>`:''}</td></tr>`;
+  }).join(''):'<tr><td colspan="6" class="empty">No disruptions — network fully operational 🎉</td></tr>';
+}
+function openDisrModal(){
+  const sel=document.getElementById('dr-lab');sel.innerHTML=LABS.map(l=>`<option value="${l.id}">${esc(l.branch_name||l.name)}</option>`).join('');
+  document.getElementById('dr-reason').value='';
+  document.getElementById('dr-from').value=new Date().toISOString().slice(0,10);
+  document.getElementById('dr-to').value='';
+  openMod('disr-modal');
+}
+async function declareDisruption(){
+  const rec={lab_id:document.getElementById('dr-lab').value,dtype:document.getElementById('dr-type').value,
+    reason:document.getElementById('dr-reason').value.trim()||null,
+    from_date:document.getElementById('dr-from').value,to_date:document.getElementById('dr-to').value||null,
+    status:'active',created_by:ACTOR};
+  const {error}=await SB.from('provider_disruptions').insert(rec);
+  if(error)return toast('e',error.message);
+  closeMod('disr-modal');toast('w','Disruption declared — provider excluded from matching & patient app until resolved');await refresh();
+}
+async function resolveDisruption(id){
+  const {error}=await SB.from('provider_disruptions').update({status:'resolved',resolved_at:new Date().toISOString()}).eq('id',id);
+  if(error)return toast('e',error.message);
+  toast('s','Disruption resolved — provider back in rotation');await refresh();
+}
+async function advanceStage(entId){
+  const e=ENTS.find(x=>x.id===entId);if(!e)return;
+  const i=STAGE_FLOW.indexOf(e.onboarding_stage||'prospect');
+  if(i>=STAGE_FLOW.length-1)return;
+  const next=STAGE_FLOW[i+1];
+  if(next==='live'){
+    const ok=EDOCS.filter(d=>d.enterprise_id===entId&&d.status==='verified').map(d=>d.doc_type);
+    const missing=DOC_TYPES.filter(([t])=>!ok.includes(t));
+    if(missing.length)return toast('e','Cannot go live — verify first: '+missing.map(m=>m[1]).join(', '));
+  }
+  const patch={onboarding_stage:next};
+  if(next==='live')patch.active=true;
+  const {error}=await SB.from('enterprises').update(patch).eq('id',entId);
+  if(error)return toast('e',error.message);
+  toast('s','Onboarding → '+(STAGE_LBL[next]||next));await refresh();openEnterprise(entId);
+}
+async function cycleDoc(entId,docType){
+  const cur=EDOCS.find(d=>d.enterprise_id===entId&&d.doc_type===docType);
+  const order=['pending','received','verified'];
+  const next=order[(order.indexOf(cur?cur.status:'pending')+1)%3];
+  const rec={enterprise_id:entId,doc_type:docType,status:next,
+    verified_by:next==='verified'?ACTOR:null,
+    uploaded_at:next==='pending'?null:new Date().toISOString()};
+  const {error}=await SB.from('enterprise_documents').upsert(rec,{onConflict:'enterprise_id,doc_type'});
+  if(error)return toast('e',error.message);
+  await refresh();openEnterprise(entId);
 }
 function testById(id){const t=TESTS.find(x=>x.id===id);return t?t.name:'—'}
 function agrParty(a){return a.lab_id?labById(a.lab_id):(entName(a.enterprise_id)||'—')}
@@ -1253,7 +1424,7 @@ async function runMatch(){
     const cov=r.tests_required>0?Math.round(r.capability_pct*100):100;
     const sc=Math.round(r.final_score*100);
     return `<tr style="${i===0?'background:var(--teal-l)':''}">
-      <td style="font-weight:800">${i+1}${i===0?' <span class="badge bt">RECOMMENDED</span>':''}</td>
+      <td style="font-weight:800">${i+1}${r.disrupted?' <span class="badge br">🚨 DISRUPTED</span>':(i===0?' <span class="badge bt">RECOMMENDED</span>':'')}</td>
       <td style="font-weight:600">${esc(r.branch_name||r.lab_name)}<div style="font-size:11px;color:var(--hint)">${esc(r.city||'')}${r.home_collection?' · 🏠 home collection':''}</div></td>
       <td>${r.distance_km!=null?r.distance_km+' km':'—'}</td>
       <td><div style="display:flex;align-items:center;gap:7px"><div class="pbar" style="width:70px"><div class="pfill" style="width:${cov}%;background:${cov===100?'var(--teal)':cov>=60?'#F59E0B':'#EF4444'}"></div></div><span style="font-size:11px;font-weight:700">${r.tests_covered}/${r.tests_required}</span></div></td>
@@ -1286,6 +1457,27 @@ function openEnterprise(id){
       <span class="k">Discount</span><span class="v">${e.discount_pct?e.discount_pct+'%':'—'}</span>
       <span class="k">Annual quota</span><span class="v">${e.annual_quota_per_employee||'—'} / employee</span>
     </div>
+    <div class="sect-h">Onboarding Lifecycle</div>
+    <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:10px">
+      ${STAGE_FLOW.map((st,i)=>{
+        const cur=STAGE_FLOW.indexOf(e.onboarding_stage||'prospect');
+        const done=i<cur, now=i===cur;
+        return `<span class="badge ${now?(st==='live'?'bg':'bb'):done?'bt':'bgr'}">${done?'✓ ':''}${STAGE_LBL[st]}</span>${i<STAGE_FLOW.length-1?'<span style="color:var(--hint);font-size:11px">→</span>':''}`;
+      }).join('')}
+    </div>
+    ${(e.onboarding_stage||'prospect')!=='live'
+      ?`<button class="btn sm primary" onclick="advanceStage('${id}')">Advance to ${STAGE_LBL[STAGE_FLOW[Math.min(STAGE_FLOW.indexOf(e.onboarding_stage||'prospect')+1,4)]]} →</button>`
+      :`<span style="font-size:12px;color:var(--green);font-weight:700">✓ Live — employees can see & book this plan</span>`}
+    <div class="sect-h">Compliance Documents</div>
+    ${DOC_TYPES.map(([t,label])=>{
+      const d=EDOCS.find(x=>x.enterprise_id===id&&x.doc_type===t);
+      const st=d?d.status:'pending';
+      const bc={pending:'bgr',received:'ba',verified:'bg'}[st];
+      return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:6px 0;border-bottom:1px solid var(--bord2)">
+        <span>${label}${d&&d.verified_by?`<div style="font-size:10px;color:var(--hint)">verified by ${esc(d.verified_by)}</div>`:''}</span>
+        <span class="badge ${bc}" style="cursor:pointer" title="Click to cycle: pending → received → verified" onclick="cycleDoc('${id}','${t}')">${st}</span>
+      </div>`;
+    }).join('')}
     <div class="sect-h">Providers (${provs.length}) <button class="btn sm" style="padding:3px 9px" onclick="openProvModal('${id}')">+ Add</button></div>`;
   h+=provs.length?provs.map(l=>`<div class="mini-card" style="padding:9px 11px"><div style="display:flex;justify-content:space-between"><span style="font-weight:600">${esc(l.branch_name||l.name)}</span><span class="badge ${l.active!==false?'bg':'bgr'}">${l.active!==false?'Active':'Off'}</span></div><div style="font-size:11px;color:var(--hint)">${esc(l.city||'')}</div></div>`).join(''):'<div style="font-size:12px;color:var(--hint)">No providers yet</div>';
   h+=`<div class="sect-h">Facility Branches (${facs.length})</div>`;
@@ -1365,15 +1557,19 @@ function openCpkgModal(entId){
   const se=document.getElementById('cp-ent');se.innerHTML=ENTS.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
   if(entId)se.value=entId;
   document.getElementById('cp-pkg').innerHTML=PACKAGES.map(p=>`<option value="${p.id}" data-price="${p.base_price||0}">${esc(p.name)} (${money(p.base_price)})</option>`).join('');
-  cpkgSync();document.getElementById('cp-limit').value='2';openMod('cpkg-modal');
+  cpkgSync();document.getElementById('cp-limit').value='2';
+  document.getElementById('cp-grade').value='';
+  const dl=document.getElementById('grade-opts');if(dl&&!dl.children.length)GRADE_OPTS.forEach(g=>{const o=document.createElement('option');o.value=g;dl.appendChild(o)});
+  openMod('cpkg-modal');
 }
 function cpkgSync(){const o=document.getElementById('cp-pkg').selectedOptions[0];if(o)document.getElementById('cp-price').value=Math.round((o.dataset.price||0)*0.85)}
 async function mapCompanyPackage(){
   const rec={enterprise_id:document.getElementById('cp-ent').value,package_id:document.getElementById('cp-pkg').value,
     employee_price:parseFloat(document.getElementById('cp-price').value)||null,
-    annual_limit:parseInt(document.getElementById('cp-limit').value)||null, active:true};
+    annual_limit:parseInt(document.getElementById('cp-limit').value)||null,
+    grade:(document.getElementById('cp-grade').value.trim().toUpperCase())||null, active:true};
   if(!rec.enterprise_id||!rec.package_id)return toast('e','Pick a company and a package');
-  const {error}=await SB.from('company_packages').upsert(rec,{onConflict:'enterprise_id,package_id'});
+  const {error}=await SB.from('company_packages').upsert(rec,{onConflict:'enterprise_id,package_id,grade'});
   if(error)return toast('e',error.message);
   closeMod('cpkg-modal');toast('s','Package mapped to company');await refresh();
 }
