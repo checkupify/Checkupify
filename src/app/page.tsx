@@ -52,10 +52,11 @@ export default function App() {
     // Corporate plan: if this employee's company has mapped packages, show ONLY those, at the negotiated employee price
     if (usr?.enterprise_id) {
       const { data: maps } = await supabase.from("company_packages")
-        .select("package_id,employee_price,annual_limit,active")
+        .select("package_id,employee_price,annual_limit,active,grade")
         .eq("enterprise_id", usr.enterprise_id).eq("active", true);
-      type CPkg = { package_id: string; employee_price: number | null; annual_limit: number | null; active: boolean };
-      const cmaps = (maps ?? []) as CPkg[];
+      type CPkg = { package_id: string; employee_price: number | null; annual_limit: number | null; active: boolean; grade: string | null };
+      // Eligibility: grade-specific mappings apply only to that grade; blank grade = all employees
+      const cmaps = ((maps ?? []) as CPkg[]).filter(m => !m.grade || m.grade === (usr.grade ?? ""));
       if (cmaps.length) {
         const byId = new Map<string, CPkg>(cmaps.map(m => [m.package_id, m]));
         pkgList = pkgList.filter(p => byId.has(p.id)).map(p => {
@@ -528,7 +529,7 @@ const CITY_COORDS: Record<string, [number, number]> = {
   hyderabad: [17.3850, 78.4867], bangalore: [12.9716, 77.5946], bengaluru: [12.9716, 77.5946],
   mumbai: [19.0760, 72.8777], delhi: [28.6139, 77.2090], chennai: [13.0827, 80.2707], pune: [18.5204, 73.8567],
 };
-type MatchRow = { lab_id: string; distance_km: number | null; final_score: number; capability_pct: number };
+type MatchRow = { lab_id: string; distance_km: number | null; final_score: number; capability_pct: number; disrupted: boolean };
 function SelectLab({ pkg, labs, user, onSelect, onBack }: { pkg: Pkg; labs: Lab[]; user: User; onSelect: (l: Lab) => void; onBack: () => void }) {
   const [match, setMatch] = useState<Record<string, MatchRow>>({});
   useEffect(() => {
@@ -541,7 +542,8 @@ function SelectLab({ pkg, labs, user, onSelect, onBack }: { pkg: Pkg; labs: Lab[
         setMatch(m);
       });
   }, [pkg.id, user.city]);
-  const ranked = [...labs].sort((a, b) => (match[b.id]?.final_score ?? 0) - (match[a.id]?.final_score ?? 0));
+  // Disrupted providers are removed from the bookable list entirely
+  const ranked = [...labs].filter(l => !match[l.id]?.disrupted).sort((a, b) => (match[b.id]?.final_score ?? 0) - (match[a.id]?.final_score ?? 0));
   const bestId = ranked.length && match[ranked[0].id] ? ranked[0].id : null;
   return (
     <div style={{ minHeight: "100svh", background: "#F0F4F8" }}>
