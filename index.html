@@ -627,7 +627,7 @@ tr:hover td{background:#FAFBFC}
         <div style="padding:20px">
           <div style="display:flex;justify-content:space-between;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
             <div><div style="font-size:16px;font-weight:800">INVOICE</div><div style="font-size:12px;color:var(--hint);margin-top:2px">Invoice # INV-2026-04-HFL</div></div>
-            <div style="text-align:right"><div style="font-size:12px;color:var(--hint)">Period</div><div style="font-weight:700">01–30 Apr 2026</div></div>
+            <div style="text-align:right"><div style="font-size:12px;color:var(--hint)">Period</div><div style="font-weight:700" id="cur-period">—</div></div>
           </div>
           <div class="frow f2" style="margin-bottom:16px">
             <div style="font-size:12px"><div style="font-weight:700;margin-bottom:5px">Provider</div><div>HealthFirst Labs</div><div style="color:var(--hint)">Jubilee Hills, Hyderabad</div><div style="color:var(--hint)">NABL-ACC-2024-HFL</div></div>
@@ -635,15 +635,15 @@ tr:hover td{background:#FAFBFC}
           </div>
           <div id="inv-table"></div>
           <div style="margin-top:16px;padding-top:14px;border-top:2px solid var(--border)">
-            <div class="iline" style="border-bottom:1px solid var(--bord2)"><span class="lbl">Bookings (342)</span><span>₹4,28,000</span></div>
-            <div class="iline" style="border-bottom:1px solid var(--bord2)"><span class="lbl">Platform Fee 11%</span><span style="color:var(--red)">−₹47,080</span></div>
-            <div class="iline" style="border-bottom:1px solid var(--bord2)"><span class="lbl">SLA Deductions</span><span style="color:var(--amber)">−₹2,400</span></div>
-            <div class="iline" style="font-weight:800;font-size:14px;border-bottom:none"><span>Net Payout</span><span style="color:var(--green)">₹3,78,520</span></div>
+            <div class="iline" style="border-bottom:1px solid var(--bord2)"><span class="lbl" id="inv-acc-lbl">Open credit (accrued)</span><span id="inv-accrued">—</span></div>
+            <div class="iline" style="border-bottom:1px solid var(--bord2)"><span class="lbl">Already invoiced / paid</span><span id="inv-invoiced">—</span></div>
+            <div class="iline" style="font-weight:800;font-size:14px;border-bottom:none"><span>Ready to invoice (reports delivered)</span><span style="color:var(--green)" id="inv-ready">—</span></div>
           </div>
           <div style="margin-top:16px;display:flex;gap:10px">
-            <button class="btn primary" onclick="toast('s','Invoice approved! Payout of ₹3,78,520 scheduled for 25 Apr.')">Approve Invoice</button>
+            <button class="btn primary" onclick="submitProviderInvoice()">Submit Invoice to Checkupify</button>
             <button class="btn" onclick="toast('i','Dispute form opened')">Raise Dispute</button>
           </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--hint)">Credit model: bookings accrue at your agreed (masked) rates. Invoice covers completed bookings; payment due per agreement terms.</div>
         </div>
       </div>
       <div class="card">
@@ -658,9 +658,9 @@ tr:hover td{background:#FAFBFC}
     <!-- ═══ RECONCILIATION ═══ -->
     <div class="page" id="p-recon">
       <div class="metrics m3">
-        <div class="mcard"><div class="mcard-top" style="background:var(--teal)"></div><div class="mlabel">Total Records</div><div class="mval">342</div></div>
-        <div class="mcard"><div class="mcard-top" style="background:#10B981"></div><div class="mlabel">Matched</div><div class="mval" style="color:var(--green)">336</div></div>
-        <div class="mcard"><div class="mcard-top" style="background:#EF4444"></div><div class="mlabel">Mismatch</div><div class="mval" style="color:var(--red)">6</div></div>
+        <div class="mcard"><div class="mcard-top" style="background:var(--teal)"></div><div class="mlabel">Total Records</div><div class="mval" id="rc-total">—</div></div>
+        <div class="mcard"><div class="mcard-top" style="background:#10B981"></div><div class="mlabel">Matched</div><div class="mval" style="color:var(--green)" id="rc-match">—</div></div>
+        <div class="mcard"><div class="mcard-top" style="background:#EF4444"></div><div class="mlabel">Mismatch</div><div class="mval" style="color:var(--red)" id="rc-mis">—</div></div>
       </div>
       <div class="card">
         <div class="card-head"><span class="card-title">Reconciliation Log</span><button class="btn sm primary" onclick="exportCSV()">Export</button></div>
@@ -993,6 +993,8 @@ function rPhone(){return'+91-'+rn(7000000000,9999999999)}
 function fmt(n){return'₹'+Math.round(n).toLocaleString('en-IN')}
 
 let PENDING_APT=[], CONFIRM_PENDING=[], ALL_APT=[], PKG_DATA=[]
+let MY_LAB=null, AGR=null, RATES=[], LEDGER=[], PINV=[]
+function aptStage(id){const a=ALL_APT.find(x=>x.id===id);return a?a.stage:null}
 
 // Map a Supabase booking row -> the shapes the render fns expect
 const TODAY=new Date().toISOString().slice(0,10)
@@ -1034,12 +1036,31 @@ async function loadData(){
 
   // PKG_DATA from packages
   const { data:pk } = await SB.from('packages').select('id,name,slug,base_price,mrp,test_count').order('sort_order').limit(50)
-  PKG_DATA = (pk||[]).map(p=>{
-    const price=p.base_price||0
+  // ── Credit model: resolve MY lab, its agreement, rate card, ledger, invoices ──
+  const uid = SESSION && SESSION.user ? SESSION.user.id : null
+  const { data:allLabs } = await SB.from('labs').select('id,name,branch_name,user_id').limit(100)
+  MY_LAB = (allLabs||[]).find(l=>uid && l.user_id===uid) || (allLabs||[]).find(l=>(l.name||'').includes('HealthFirst')) || (allLabs||[])[0] || null
+  if(MY_LAB){
+    const { data:ag } = await SB.from('partner_agreements').select('*').eq('lab_id',MY_LAB.id).eq('status','active').limit(1)
+    AGR = (ag&&ag[0])||null
+    if(AGR){
+      const { data:rl } = await SB.from('agreement_rates').select('*').eq('agreement_id',AGR.id).limit(2000)
+      RATES = rl||[]
+    } else RATES=[]
+    const { data:cl } = await SB.from('credit_ledger').select('*').eq('lab_id',MY_LAB.id).order('accrued_at',{ascending:false}).limit(1000)
+    LEDGER = cl||[]
+    const { data:pi } = await SB.from('provider_invoices').select('*').eq('lab_id',MY_LAB.id).order('created_at',{ascending:false}).limit(200)
+    PINV = pi||[]
+  }
+  // Contract page: the REAL masked rate card (agreed rate = what this lab receives per booking)
+  const rateByPkg = {}; RATES.filter(r=>r.item_type==='package').forEach(r=>rateByPkg[r.package_id]=r)
+  PKG_DATA = (pk||[]).filter(p=>rateByPkg[p.id]).map(p=>{
+    const r=rateByPkg[p.id]
     return { name:p.name, code:(p.slug||'PKG').toUpperCase().slice(0,14),
-             mask:'HFL-'+(p.slug||'pkg').slice(0,6).toUpperCase(),
-             mrp:p.mrp||Math.round(price*1.6), price, share:Math.round(price*0.89) }
+             mask:r.masking_id, mrp:p.mrp||p.base_price, price:p.base_price||0,
+             share:Math.round(+r.agreed_rate||0) }
   })
+  if(!PKG_DATA.length) PKG_DATA=(pk||[]).map(p=>({name:p.name,code:(p.slug||'PKG').toUpperCase().slice(0,14),mask:'—',mrp:p.mrp||p.base_price,price:p.base_price||0,share:0}))
 
   setLiveNumbers(rows)
 }
@@ -1142,11 +1163,17 @@ function renderAllApt(filter='all'){
 
 function renderReconTable(){
   const tb=document.getElementById('recon-table');if(!tb)return
-  const data=Array.from({length:8},(_,i)=>{
-    const lab=rn(1800,5000),match=Math.random()>.22
-    const ck=match?lab:lab+rn(-200,200)
-    return{id:rId(),patient:PATIENTS[i%PATIENTS.length],lab,ck,diff:lab-ck,match}
+  const curRate={};RATES.forEach(r=>curRate[r.id]=+r.agreed_rate||0)
+  const live=LEDGER.filter(l=>l.status!=='cancelled')
+  const data=live.map(l=>{
+    const b=ALL_APT.find(a=>a.id===l.booking_id)
+    const ck=+l.agreed_rate||0                                    // your ledger (snapshot at booking)
+    const lab=l.agreement_rate_id&&curRate[l.agreement_rate_id]!=null?curRate[l.agreement_rate_id]:ck  // current rate card
+    return{id:l.booking_id||'—',patient:(b&&b.patient)||l.item_desc||'—',lab,ck,diff:lab-ck,match:Math.abs(lab-ck)<1}
   })
+  const set=(i,v)=>{const e=document.getElementById(i);if(e)e.textContent=v}
+  set('rc-total',data.length);set('rc-match',data.filter(d=>d.match).length);set('rc-mis',data.filter(d=>!d.match).length)
+  if(!data.length){tb.innerHTML='<tr><td colspan="7" style="padding:30px;text-align:center;color:var(--hint)">No credit entries yet</td></tr>';return}
   tb.innerHTML=data.map(d=>`<tr style="${!d.match?'background:var(--redbg)':''}">
     <td style="font-family:monospace;font-size:11px;color:#00875A;font-weight:700">${d.id}</td>
     <td style="font-weight:600">${d.patient}</td>
@@ -1175,15 +1202,20 @@ function renderContractPkg(){
 
 function renderPayoutTable(){
   const tb=document.getElementById('payout-table');if(!tb)return
-  const months=['March 2026','February 2026','January 2026','December 2025']
-  tb.innerHTML=months.map((m,i)=>`<tr>
-    <td style="font-weight:600">${m}</td>
-    <td>${rn(280,360)}</td>
-    <td>₹${rn(350000,480000).toLocaleString('en-IN')}</td>
-    <td style="font-weight:700;color:var(--green)">₹${rn(310000,420000).toLocaleString('en-IN')}</td>
-    <td><span class="badge ${i===0?'ba':'bg'}">${i===0?'Processing':'Paid'}</span></td>
-    <td style="font-size:12px">${i===0?'25 Apr 2026':'25 '+m.split(' ')[0]+' '+m.split(' ')[1]}</td>
-  </tr>`).join('')
+  if(!PINV.length){tb.innerHTML='<tr><td colspan="6" style="padding:30px;text-align:center;color:var(--hint)">No invoices submitted yet — use “Submit Invoice to Checkupify” above.</td></tr>';return}
+  const sc={submitted:'ba',approved:'bb',disputed:'br',paid:'bg'}
+  const sl={submitted:'Under Review',approved:'Approved',disputed:'Disputed',paid:'Paid'}
+  tb.innerHTML=PINV.map(i=>{
+    const n=LEDGER.filter(l=>l.provider_invoice_id===i.id).length
+    const per=(i.period_from?new Date(i.period_from).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}):'—')+' – '+(i.period_to?new Date(i.period_to).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'—')
+    return `<tr>
+    <td style="font-weight:600">${i.provider_invoice_no}<div style="font-size:11px;color:var(--hint);font-family:monospace">${i.internal_ref}</div></td>
+    <td>${n}</td>
+    <td>₹${Math.round(i.claimed_amount||0).toLocaleString('en-IN')}</td>
+    <td style="font-weight:700;color:var(--green)">₹${Math.round(i.matched_amount||0).toLocaleString('en-IN')}</td>
+    <td><span class="badge ${sc[i.status]||'bg'}">${sl[i.status]||i.status}</span></td>
+    <td style="font-size:12px">${i.paid_at?new Date(i.paid_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):(i.due_date?'due '+new Date(i.due_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}):per)}</td>
+  </tr>`}).join('')
 }
 
 function renderQsSlaMetrics(){
@@ -1502,9 +1534,57 @@ function toast(type,msg){
 // ══════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════
+function inr(n){return '₹'+Math.round(n||0).toLocaleString('en-IN')}
+function eligibleLedger(){return LEDGER.filter(l=>l.status==='accrued'&&aptStage(l.booking_id)==='Reports Received')}
+function renderProviderInvoice(){
+  const it=document.getElementById('inv-table');if(!it)return
+  const open=LEDGER.filter(l=>l.status==='accrued')
+  const ready=eligibleLedger()
+  const inv=LEDGER.filter(l=>l.status==='invoiced'||l.status==='paid')
+  const sum=a=>a.reduce((s,l)=>s+(+l.agreed_rate||0),0)
+  const set=(i,v)=>{const e=document.getElementById(i);if(e)e.textContent=v}
+  set('inv-accrued',inr(sum(open))+' ('+open.length+')')
+  set('inv-invoiced',inr(sum(inv)))
+  set('inv-ready',inr(sum(ready))+' ('+ready.length+')')
+  const dates=open.map(l=>l.accrued_at).sort()
+  const fd=d=>new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})
+  set('cur-period',dates.length?fd(dates[0])+' – '+fd(new Date()):'—')
+  const rows=open.slice(0,10)
+  it.innerHTML=rows.length?'<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr>'+
+    '<th style="text-align:left;padding:7px 4px;color:var(--hint);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border)">Apt ID</th>'+
+    '<th style="text-align:left;padding:7px 4px;color:var(--hint);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border)">Masking ID</th>'+
+    '<th style="text-align:left;padding:7px 4px;color:var(--hint);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border)">Status</th>'+
+    '<th style="text-align:right;padding:7px 4px;color:var(--hint);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border)">Agreed Rate</th></tr></thead><tbody>'+
+    rows.map(l=>`<tr>
+      <td style="padding:7px 4px;font-family:monospace;font-size:11px;color:#00875A;font-weight:700;border-bottom:1px solid var(--bord2)">${l.booking_id||'—'}</td>
+      <td style="padding:7px 4px;font-family:monospace;font-size:11px;color:var(--teal-d);font-weight:700;border-bottom:1px solid var(--bord2)">${l.masking_id||'—'}</td>
+      <td style="padding:7px 4px;border-bottom:1px solid var(--bord2)">${aptStage(l.booking_id)==='Reports Received'?'<span class="badge bg">Deliverable ✓</span>':'<span class="badge ba">In progress</span>'}</td>
+      <td style="padding:7px 4px;text-align:right;font-weight:700;border-bottom:1px solid var(--bord2)">${inr(l.agreed_rate)}</td>
+    </tr>`).join('')+
+    (open.length>10?`<tr><td colspan="4" style="padding:7px 4px;color:var(--hint);font-size:11px">…and ${open.length-10} more entries</td></tr>`:'')+
+    '</tbody></table>':'<div style="padding:18px;text-align:center;color:var(--hint);font-size:12px">No open credit entries</div>'
+}
+async function submitProviderInvoice(){
+  if(!AGR){toast('e','No active agreement on file — contact Checkupify partner team');return}
+  const el=eligibleLedger()
+  if(!el.length){toast('w','Nothing ready to invoice yet — entries become invoiceable once reports are received & verified');return}
+  const total=el.reduce((s,l)=>s+(+l.agreed_rate||0),0)
+  const dates=el.map(l=>l.accrued_at).sort()
+  const invNo='HFL-'+new Date().toISOString().slice(0,10).replace(/-/g,'')+'-'+String(PINV.length+1).padStart(3,'0')
+  const due=new Date(Date.now()+(AGR.payment_terms_days||30)*86400000).toISOString().slice(0,10)
+  const {data,error}=await SB.from('provider_invoices').insert({
+    provider_invoice_no:invNo,agreement_id:AGR.id,lab_id:MY_LAB.id,
+    period_from:dates[0].slice(0,10),period_to:new Date().toISOString().slice(0,10),
+    claimed_amount:total,matched_amount:total,variance:0,status:'submitted',
+    due_date:due,submitted_by:(SESSION&&SESSION.user&&SESSION.user.email)||'lab'}).select().single()
+  if(error){toast('e',error.message);return}
+  await SB.from('credit_ledger').update({status:'invoiced',provider_invoice_id:data.id,updated_at:new Date().toISOString()}).in('id',el.map(x=>x.id))
+  toast('s',`Invoice ${invNo} submitted to Checkupify — ${inr(total)} for ${el.length} bookings. Due ${due}.`)
+  await loadData();renderAll()
+}
 function renderAll(){
   renderDashReports(); renderConfirmTable(); renderPendingTable('all'); renderAllApt('all')
-  renderReconTable(); renderContractPkg(); renderPayoutTable(); renderQsSlaMetrics()
+  renderReconTable(); renderContractPkg(); renderPayoutTable(); renderQsSlaMetrics(); renderProviderInvoice()
   switchSetTab('general'); setTimeout(drawDashChart,150)
 }
 async function boot(){
