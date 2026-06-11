@@ -989,7 +989,7 @@ function openApt(id){
     <span class="k">Payment</span><span class="v">${b.paid_at?'<span class="badge bg">Paid · '+dmy(b.paid_at)+'</span>':'<span class="badge ba">Unpaid</span>'}</span>
     ${b.razorpay_payment_id?`<span class="k">Razorpay</span><span class="v mono" style="font-size:11px">${esc(b.razorpay_payment_id)}</span>`:''}
     <span class="k">Created</span><span class="v">${b.created_at?new Date(b.created_at).toLocaleString('en-IN'):'—'}</span>
-    ${b.report_url?`<span class="k">Report</span><span class="v"><a href="${esc(b.report_url)}" target="_blank" style="color:var(--teal-d)">Open PDF ↗</a></span>`:''}
+    ${b.report_url?`<span class="k">Report</span><span class="v">${b.report_url.startsWith('storage:')?`<a href="#" onclick="event.preventDefault();openReport('${esc(b.report_url)}')" style="color:var(--teal-d)">Open PDF ↗</a>`:`<a href="${esc(b.report_url)}" target="_blank" style="color:var(--teal-d)">Open PDF ↗</a>`}</span>`:''}
     ${b.notes?`<span class="k">Notes</span><span class="v">${esc(b.notes)}</span>`:''}
     ${b.rejection_reason?`<span class="k">Rejection</span><span class="v" style="color:var(--red)">${esc(b.rejection_reason)}</span>`:''}
   </div>`;
@@ -1057,7 +1057,7 @@ function openDig(id){
   let h=`<div style="padding:14px 16px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:15px;font-weight:800">${esc(b.patient_name||'—')}</div><span class="badge ${STAGE_CLR[stg(b)]}">${stg(b)}</span></div>
     <div style="font-size:12px;color:var(--hint);margin-bottom:14px">${esc(id)} · ${esc(pkgName(b))}</div>`;
-  if(b.report_url)h+=`<a href="${esc(b.report_url)}" target="_blank" class="btn sm" style="margin-bottom:14px">📄 Open report PDF</a>`;
+  if(b.report_url)h+=reportLink(b.report_url,'Open report PDF');
   if(!tr.length){h+=`<div class="alert alert-a" style="margin-bottom:12px"><span>No test-level rows yet. The lab uploads these from the Provider Dashboard.</span></div>`;}
   else{
     h+=`<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:var(--muted);font-weight:600">Verification progress</span><span style="font-weight:700;color:var(--teal-d)">${recv}/${tr.length}</span></div>
@@ -1805,6 +1805,18 @@ function globalSearch(q){
 
 // ════════ MODAL / TOAST / AUTH ════════
 function openMod(id){document.getElementById(id).classList.add('open')}
+async function openReport(marker){
+  const path=marker.replace(/^storage:/,'');
+  const {data,error}=await SB.storage.from('reports').createSignedUrl(path,3600);
+  if(error)return toast('e','Cannot open report: '+error.message);
+  window.open(data.signedUrl,'_blank');
+}
+function reportLink(url,label){
+  if(!url)return '';
+  return url.startsWith('storage:')
+    ? `<button class="btn sm" style="margin-bottom:14px" onclick="openReport('${esc(url)}')">📄 ${label}</button>`
+    : `<a href="${esc(url)}" target="_blank" class="btn sm" style="margin-bottom:14px">📄 ${label}</a>`;
+}
 function openDrawer(){document.getElementById('drawer-ov').classList.add('open');document.getElementById('drawer').classList.add('open')}
 function closeDrawer(){document.getElementById('drawer-ov').classList.remove('open');document.getElementById('drawer').classList.remove('open')}
 function closeMod(id){document.getElementById(id).classList.remove('open')}
