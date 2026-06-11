@@ -425,6 +425,11 @@ tbody tr:hover td{background:#FAFBFC}
         <div class="alert alert-b" style="margin:12px 14px"><span>The eligibility backbone: upload employees with <b>grades</b>; the moment an employee logs into the patient app with their phone, they're recognized and see only their grade's plan.</span></div>
         <div class="tw"><table><thead><tr><th>Employee</th><th>Code</th><th>Grade</th><th>Phone</th><th>City</th></tr></thead><tbody id="roster-table"></tbody></table></div>
       </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Client Groups</span><button class="btn sm primary" onclick="openGroupModal()">+ New Group</button></div>
+        <div class="alert alert-b" style="margin:12px 14px"><span>Manage many companies as one account (conglomerates, regional panels, network types). Set the group's <b>margin %</b> once, then enable a package for the whole group — it propagates to every member and their employees instantly.</span></div>
+        <div class="tw"><table><thead><tr><th>Group</th><th>Region</th><th>Network</th><th>Margin</th><th>Members</th></tr></thead><tbody id="grp-table"></tbody></table></div>
+      </div>
     </div>
 
     <!-- PARTNER SETUP -->
@@ -521,7 +526,7 @@ tbody tr:hover td{background:#FAFBFC}
           </div>
           <div class="alert alert-b" style="margin:12px 14px"><span>Fully automated ranking — no manual mapping. The engine scores every active provider against the package's required tests (facility matrix), customer distance, TAT, margin and rating. Server-side in Postgres.</span></div>
           <div class="tw"><table>
-            <thead><tr><th>#</th><th>Provider</th><th>Distance</th><th>Test Coverage</th><th>TAT</th><th>Margin</th><th>Rating</th><th>Score</th></tr></thead>
+            <thead><tr><th>#</th><th>Provider</th><th>Distance</th><th>Coverage</th><th>TAT</th><th>Margin</th><th>Rating</th><th>Score</th></tr></thead>
             <tbody id="me-table"><tr><td colspan="8" class="empty">Pick a package and location, then run the engine.</td></tr></tbody>
           </table></div>
           <div id="me-workorder" style="display:none;margin:0 14px 14px;padding:13px 15px;background:var(--teal-l);border:1px solid var(--greenbord);border-radius:10px;font-size:13px"></div>
@@ -651,6 +656,7 @@ tbody tr:hover td{background:#FAFBFC}
         <div class="fgrp"><label>POC phone</label><input id="en-phone" placeholder="+91…"></div>
       </div>
       <div class="fgrp"><label>POC email</label><input id="en-email" type="email" placeholder="poc@company.com"></div>
+      <div class="fgrp"><label>Region</label><input id="en-region" placeholder="e.g. Hyderabad / South / Pan-India"></div>
       <div class="frow f2">
         <div class="fgrp"><label>Contract start</label><input id="en-cs" type="date"></div>
         <div class="fgrp"><label>Contract end</label><input id="en-ce" type="date"></div>
@@ -706,6 +712,45 @@ tbody tr:hover td{background:#FAFBFC}
       <div class="fgrp"><label>Employee price (₹)</label><input id="cp-price" type="number"></div>
     </div>
     <div class="mfoot"><button class="btn" onclick="closeMod('cpkg-modal')">Cancel</button><button class="btn primary" onclick="mapCompanyPackage()">Map Package</button></div>
+  </div>
+</div>
+
+<!-- NEW GROUP MODAL -->
+<div class="ov" id="group-modal" onclick="if(event.target===this)closeMod('group-modal')">
+  <div class="modal modal-md">
+    <div class="mhead"><div><div class="mtitle">New Client Group</div><div style="font-size:12px;color:var(--hint);margin-top:3px">One account, many companies, one margin</div></div><button class="mclose" onclick="closeMod('group-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="frow f2">
+        <div class="fgrp"><label>Group name <span class="req">*</span></label><input id="gr-name" placeholder="e.g. Tata Group / Hyderabad SME Panel"></div>
+        <div class="fgrp"><label>Margin %</label><input id="gr-margin" type="number" value="20"></div>
+      </div>
+      <div class="frow f2">
+        <div class="fgrp"><label>Quick-add by region</label><select id="gq-region" onchange="gmQuick()"></select></div>
+        <div class="fgrp"><label>Quick-add by network type</label><select id="gq-type" onchange="gmQuick()"></select></div>
+      </div>
+      <div class="fgrp"><label>Member companies <span class="req">*</span> (tick individually or use quick-add)</label>
+        <div id="gm-list" style="max-height:190px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px 10px"></div>
+      </div>
+    </div>
+    <div class="mfoot"><button class="btn" onclick="closeMod('group-modal')">Cancel</button><button class="btn primary" onclick="createGroup()">Create Group</button></div>
+  </div>
+</div>
+
+<!-- ENABLE PACKAGE FOR GROUP MODAL -->
+<div class="ov" id="gpkg-modal" onclick="if(event.target===this)closeMod('gpkg-modal')">
+  <div class="modal modal-sm">
+    <div class="mhead"><div><div class="mtitle">Enable Package for Group</div><div style="font-size:12px;color:var(--hint);margin-top:3px" id="gp-group-name"></div></div><button class="mclose" onclick="closeMod('gpkg-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="fgrp"><label>Package <span class="req">*</span></label><select id="gp-pkg" onchange="suggestGroupPrice()"></select></div>
+      <div class="frow f2">
+        <div class="fgrp"><label>Employee grade</label><input id="gp-grade" list="grade-opts" placeholder="blank = all grades"></div>
+        <div class="fgrp"><label>Annual limit</label><input id="gp-limit" type="number" value="2"></div>
+      </div>
+      <div class="fgrp"><label>Employee price (₹) — margin-derived</label><input id="gp-price" type="number">
+        <div id="gp-hint" style="font-size:11px;color:var(--hint);margin-top:4px"></div></div>
+      <div class="alert alert-b"><span>Propagates to <b>every member company</b> (company_packages upsert). Their employees see it in the patient app immediately.</span></div>
+    </div>
+    <div class="mfoot"><button class="btn" onclick="closeMod('gpkg-modal')">Cancel</button><button class="btn primary" onclick="enableGroupPackage()">Enable for Group</button></div>
   </div>
 </div>
 
@@ -819,6 +864,7 @@ let BOOKINGS=[],USERS=[],LABS=[],PACKAGES=[],ENTS=[],LEADS=[],RESULTS=[],FEED=[]
 let CPKG=[],MASK=[],LABTESTS=[],LABPKG=[],EFAC=[],TESTS=[],AUDIT=[],CINV=[];
 let AGRS=[],RATES=[],LEDGER=[],PINV=[];let curAgr=null;
 let EDOCS=[],DISR=[];
+let FACS=[],LABFACS=[],GROUPS=[],GMEMB=[];let curGroup=null;
 const GRADE_OPTS=['E1','E2','E3','M1','M2','L1','L2'];
 const STAGE_FLOW=['prospect','docs','rates','test','live'];
 const STAGE_LBL={prospect:'Prospect',docs:'Docs Collection',rates:'Rate Card',test:'Test Booking',live:'LIVE'};
@@ -881,6 +927,13 @@ async function loadAll(){
     SB.from('provider_disruptions').select('*').order('created_at',{ascending:false}).limit(300)
   ]);
   EDOCS=ed.data||[];DISR=dr.data||[];
+  const [fc,lf,gr,gm]=await Promise.all([
+    SB.from('facility_catalog').select('*').order('category').order('sort_order').limit(100),
+    SB.from('lab_facilities').select('*').limit(3000),
+    SB.from('enterprise_groups').select('*').order('created_at').limit(200),
+    SB.from('enterprise_group_members').select('*').limit(2000)
+  ]);
+  FACS=fc.data||[];LABFACS=lf.data||[];GROUPS=gr.data||[];GMEMB=gm.data||[];
 }
 
 // ════════ DASHBOARD ════════
@@ -1185,6 +1238,7 @@ function renderSystem(){
   const rsel=document.getElementById('ros-ent');
   if(rsel&&rsel.options.length===0){ENTS.forEach(e=>rsel.add(new Option(e.name,e.id)))}
   renderRoster();
+  renderGroups();
   document.getElementById('pkg-table').innerHTML=PACKAGES.length?PACKAGES.map(p=>`<tr>
     <td style="font-weight:600">${esc(p.name)}</td><td><span class="badge bt">${esc(p.category||'General')}</span></td>
     <td>${p.test_count||0}</td><td style="color:var(--hint);text-decoration:line-through">${money(p.mrp)}</td>
@@ -1245,7 +1299,9 @@ function renderPartner(){
   // Providers table (with enterprise)
   document.getElementById('labs-table').innerHTML=LABS.length?LABS.map(l=>{
     const certs=[l.nabl_certified&&'NABL',l.nabh_certified&&'NABH',l.iso_certified&&'ISO'].filter(Boolean);
-    return `<tr><td style="font-weight:600">${esc(l.branch_name||l.name)}<div style="font-size:11px;color:var(--hint)">${esc(l.network_type||'')}</div></td>
+    const nfac=LABFACS.filter(x=>x.lab_id===l.id&&x.active).length;
+    const npkg=LABPKG.filter(x=>x.lab_id===l.id&&x.active!==false).length;
+    return `<tr class="clickrow" onclick="openProviderDrawer('${l.id}')"><td style="font-weight:600">${esc(l.branch_name||l.name)}<div style="font-size:11px;color:var(--hint)">${esc(l.network_type||'')} · ${nfac} facilities · ${npkg} auto-tagged pkgs</div></td>
     <td style="font-size:12px;color:var(--teal-d)">${esc(entName(l.enterprise_id)||'—')}</td>
     <td>${esc(l.city||'—')}</td><td>${certs.length?certs.map(c=>`<span class="badge bt" style="margin-right:3px">${c}</span>`).join(''):'<span style="color:var(--hint)">—</span>'}</td>
     <td>${l.home_collection?'<span class="badge bg">Yes</span>':'<span class="badge bgr">No</span>'}</td>
@@ -1523,6 +1579,7 @@ async function createEnterprise(){
     poc_phone:document.getElementById('en-phone').value.trim()||null,
     discount_pct:parseFloat(document.getElementById('en-disc').value)||null,
     annual_quota_per_employee:parseInt(document.getElementById('en-quota').value)||null,
+    region:document.getElementById('en-region').value.trim()||null,
     contract_start:document.getElementById('en-cs').value||null,
     contract_end:document.getElementById('en-ce').value||null, active:true};
   const {error}=await SB.from('enterprises').insert(rec);
@@ -1548,9 +1605,11 @@ async function addProvider(){
     nabl_certified:document.getElementById('pv-nabl').checked,
     home_collection:document.getElementById('pv-home').checked,
     network_type:'Partner', active:true, status:'active'};
-  const {error}=await SB.from('labs').insert(rec);
+  const {data,error}=await SB.from('labs').insert(rec).select().single();
   if(error)return toast('e',error.message);
-  closeMod('prov-modal');toast('s','Provider “'+name+'” added');await refresh();
+  closeMod('prov-modal');toast('s','Provider added — now enable its facilities');
+  await refresh();partnerSwitch('providers');
+  if(data)openProviderDrawer(data.id);
 }
 // ── Map package to company ──
 function openCpkgModal(entId){
@@ -1671,6 +1730,163 @@ function viewInvoice(id){
   document.getElementById('drawer-title').textContent=i.invoice_no;
   document.getElementById('drawer-sub').textContent='UNICRIBE PRIVATE LIMITED · Checkupify';
   document.getElementById('drawer-actions').innerHTML='';
+  document.getElementById('drawer-body').innerHTML=h;
+  openDrawer();
+}
+// ── Provider Facility Console (auto-tagging) ──
+async function refetchCapability(){
+  const [lf,lp]=await Promise.all([
+    SB.from('lab_facilities').select('*').limit(3000),
+    SB.from('lab_packages').select('*').limit(1000)
+  ]);
+  LABFACS=lf.data||[];LABPKG=lp.data||[];
+}
+function openProviderDrawer(labId){
+  const l=LABS.find(x=>x.id===labId);if(!l)return;
+  const myFacs=LABFACS.filter(x=>x.lab_id===labId);
+  const facState=fid=>{const r=myFacs.find(x=>x.facility_id===fid);return r?(r.active?'on':'off'):'none'};
+  const section=cat=>{
+    const items=FACS.filter(fc=>fc.category===cat);
+    return items.map(fc=>{
+      const st=facState(fc.id);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:7px 0;border-bottom:1px solid var(--bord2)">
+        <span>${esc(fc.name)}</span>
+        <div class="toggle ${st==='on'?'on':''}" onclick="toggleLabFacility('${labId}','${fc.id}')"></div>
+      </div>`;
+    }).join('');
+  };
+  const pathN=LABTESTS.filter(x=>x.lab_id===labId&&x.active!==false).length;
+  const tagged=LABPKG.filter(x=>x.lab_id===labId&&x.active!==false);
+  const untagged=LABPKG.filter(x=>x.lab_id===labId&&x.active===false);
+  let h=`<div class="kv" style="grid-template-columns:110px 1fr">
+    <span class="k">City</span><span class="v">${esc(l.city||'—')}</span>
+    <span class="k">Enterprise</span><span class="v">${esc(entName(l.enterprise_id)||'—')}</span>
+    <span class="k">Pathology</span><span class="v">${pathN} tests active <span style="color:var(--hint)">(manage in Facility Matrix tab)</span></span>
+  </div>
+  <div class="sect-h">🩻 Radiology Facilities</div>${section('radiology')}
+  <div class="sect-h">🩺 Consultations</div>${section('consultation')}
+  <div class="sect-h">⚡ Auto-Tagged Packages (${tagged.length})</div>
+  <div class="alert alert-b" style="margin-bottom:9px"><span>Maintained automatically from capability: a package tags itself the moment every required test <b>and</b> facility is active here — and untags when one goes off.</span></div>`;
+  h+=tagged.length?tagged.map(t=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--bord2)"><span style="font-weight:600">${esc(pkgById(t.package_id))}</span><span class="badge bg">OFFERED</span></div>`).join(''):'<div style="font-size:12px;color:var(--hint)">Nothing yet — enable facilities above.</div>';
+  if(untagged.length)h+=`<div style="margin-top:8px;font-size:11px;color:var(--hint)">Cannot serve: ${untagged.map(t=>esc(pkgById(t.package_id))).join(', ')}</div>`;
+  document.getElementById('drawer-title').textContent=l.branch_name||l.name;
+  document.getElementById('drawer-sub').textContent='Provider Facility Console';
+  document.getElementById('drawer-actions').innerHTML=`<button class="abt o" onclick="closeDrawer();openDisrModal()">🚨 Disruption</button>`;
+  document.getElementById('drawer-body').innerHTML=h;
+  openDrawer();
+}
+async function toggleLabFacility(labId,facId){
+  const row=LABFACS.find(x=>x.lab_id===labId&&x.facility_id===facId);
+  let error;
+  if(!row){({error}=await SB.from('lab_facilities').insert({lab_id:labId,facility_id:facId,active:true}));}
+  else{({error}=await SB.from('lab_facilities').update({active:!row.active,updated_at:new Date().toISOString()}).eq('id',row.id));}
+  if(error)return toast('e',error.message);
+  await refetchCapability();
+  openProviderDrawer(labId);
+  toast('s','Facility updated — packages re-tagged automatically');
+}
+// ── Client Groups (System Setup) ──
+function gmembers(gid){return GMEMB.filter(m=>m.group_id===gid)}
+function renderGroups(){
+  const tb=document.getElementById('grp-table');if(!tb)return;
+  tb.innerHTML=GROUPS.length?GROUPS.map(g=>{
+    const n=gmembers(g.id).length;
+    return `<tr class="clickrow" onclick="openGroupDrawer('${g.id}')">
+      <td style="font-weight:600">${esc(g.name)}</td>
+      <td>${g.region?esc(g.region):'<span style="color:var(--hint)">—</span>'}</td>
+      <td>${g.network_type?`<span class="badge bb">${esc(g.network_type)}</span>`:'—'}</td>
+      <td style="font-weight:700;color:var(--teal-d)">${g.margin_pct}%</td>
+      <td>${n} companies</td></tr>`;
+  }).join(''):'<tr><td colspan="5" class="empty">No groups yet — create one to manage many companies at once.</td></tr>';
+}
+function gmFill(){
+  const list=document.getElementById('gm-list');
+  list.innerHTML=ENTS.map(e=>`<label style="display:flex;align-items:center;gap:8px;font-size:13px;padding:5px 2px;text-transform:none;font-weight:500;letter-spacing:0">
+    <input type="checkbox" class="gm-cb" value="${e.id}" data-region="${esc(e.region||'')}" data-type="${esc(e.type||'')}" style="width:auto">
+    ${esc(e.name)} <span style="color:var(--hint);font-size:11px">${esc(e.region||'')} ${esc(e.type||'')}</span></label>`).join('');
+  const reg=document.getElementById('gq-region'),net=document.getElementById('gq-type');
+  reg.innerHTML='<option value="">— region —</option>'+[...new Set(ENTS.map(e=>e.region).filter(Boolean))].map(r=>`<option>${esc(r)}</option>`).join('');
+  net.innerHTML='<option value="">— network type —</option>'+[...new Set(ENTS.map(e=>e.type).filter(Boolean))].map(t=>`<option>${esc(t)}</option>`).join('');
+}
+function gmQuick(){
+  const reg=document.getElementById('gq-region').value,net=document.getElementById('gq-type').value;
+  document.querySelectorAll('.gm-cb').forEach(cb=>{
+    if((reg&&cb.dataset.region===reg)||(net&&cb.dataset.type===net))cb.checked=true;
+  });
+}
+function openGroupModal(){
+  document.getElementById('gr-name').value='';document.getElementById('gr-margin').value='20';
+  gmFill();openMod('group-modal');
+}
+async function createGroup(){
+  const name=document.getElementById('gr-name').value.trim();
+  if(!name)return toast('e','Group name is required');
+  const members=[...document.querySelectorAll('.gm-cb:checked')].map(cb=>cb.value);
+  if(!members.length)return toast('e','Select at least one company (individually or by region/network)');
+  const reg=document.getElementById('gq-region').value||null,net=document.getElementById('gq-type').value||null;
+  const {data,error}=await SB.from('enterprise_groups').insert({name,region:reg,network_type:net,
+    margin_pct:parseFloat(document.getElementById('gr-margin').value)||20,created_by:ACTOR}).select().single();
+  if(error)return toast('e',error.message);
+  const {error:e2}=await SB.from('enterprise_group_members').insert(members.map(m=>({group_id:data.id,enterprise_id:m})));
+  if(e2)return toast('e',e2.message);
+  closeMod('group-modal');toast('s','Group “'+name+'” created with '+members.length+' companies');
+  await refresh();nav('system');openGroupDrawer(data.id);
+}
+function suggestGroupPrice(){
+  const pkgId=document.getElementById('gp-pkg').value;
+  const g=GROUPS.find(x=>x.id===curGroup);if(!g)return;
+  const rates=RATES.filter(r=>r.item_type==='package'&&r.package_id===pkgId&&r.active!==false).map(r=>+r.agreed_rate||0);
+  const p=PACKAGES.find(x=>x.id===pkgId);
+  const cost=rates.length?Math.max(...rates):(p?Math.round((p.base_price||0)*0.7):0);
+  const price=Math.round(cost*(1+(+g.margin_pct||0)/100));
+  document.getElementById('gp-price').value=price||((p&&p.base_price)||'');
+  document.getElementById('gp-hint').textContent=rates.length
+    ?`cost basis ₹${cost} (highest agreed rate) + ${g.margin_pct}% margin`
+    :`no agreement rate yet — fallback cost ₹${cost} + ${g.margin_pct}%`;
+}
+function openGroupPkgModal(){
+  const g=GROUPS.find(x=>x.id===curGroup);if(!g)return;
+  document.getElementById('gp-group-name').textContent=g.name+' ('+gmembers(g.id).length+' companies · '+g.margin_pct+'% margin)';
+  document.getElementById('gp-pkg').innerHTML=PACKAGES.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  document.getElementById('gp-grade').value='';document.getElementById('gp-limit').value='2';
+  suggestGroupPrice();openMod('gpkg-modal');
+}
+async function enableGroupPackage(){
+  const g=GROUPS.find(x=>x.id===curGroup);if(!g)return;
+  const members=gmembers(g.id);
+  const pkgId=document.getElementById('gp-pkg').value;
+  const grade=(document.getElementById('gp-grade').value.trim().toUpperCase())||null;
+  const price=parseFloat(document.getElementById('gp-price').value)||null;
+  const limit=parseInt(document.getElementById('gp-limit').value)||null;
+  const rows=members.map(m=>({enterprise_id:m.enterprise_id,package_id:pkgId,grade,employee_price:price,annual_limit:limit,active:true}));
+  const {error}=await SB.from('company_packages').upsert(rows,{onConflict:'enterprise_id,package_id,grade'});
+  if(error)return toast('e',error.message);
+  closeMod('gpkg-modal');toast('s','Enabled for '+rows.length+' companies — employees see it now');
+  await refresh();openGroupDrawer(curGroup);
+}
+function openGroupDrawer(gid){
+  curGroup=gid;const g=GROUPS.find(x=>x.id===gid);if(!g)return;
+  const members=gmembers(gid);
+  const memberIds=new Set(members.map(m=>m.enterprise_id));
+  const byPkg={};
+  CPKG.forEach(c=>{if(memberIds.has(c.enterprise_id)&&c.active!==false){const k=c.package_id;byPkg[k]=byPkg[k]||{n:0,grades:new Set()};byPkg[k].n++;if(c.grade)byPkg[k].grades.add(c.grade);}});
+  let h=`<div class="kv" style="grid-template-columns:110px 1fr">
+    <span class="k">Region</span><span class="v">${esc(g.region||'—')}</span>
+    <span class="k">Network</span><span class="v">${esc(g.network_type||'—')}</span>
+    <span class="k">Margin</span><span class="v" style="font-weight:800;color:var(--teal-d)">${g.margin_pct}%</span>
+    <span class="k">Created by</span><span class="v">${esc(g.created_by||'—')}</span>
+  </div>
+  <div class="sect-h">Member Companies (${members.length})</div>
+  <div>${members.map(m=>`<span class="chip">${esc(entName(m.enterprise_id)||'—')}</span>`).join('')||'<span style="font-size:12px;color:var(--hint)">none</span>'}</div>
+  <div class="sect-h">Enabled Packages</div>`;
+  const keys=Object.keys(byPkg);
+  h+=keys.length?keys.map(k=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--bord2)">
+    <span style="font-weight:600">${esc(pkgById(k))}${byPkg[k].grades.size?` <span class="badge bp">${[...byPkg[k].grades].join('/')}</span>`:''}</span>
+    <span>${byPkg[k].n}/${members.length} companies</span></div>`).join('')
+    :'<div style="font-size:12px;color:var(--hint)">Nothing enabled yet.</div>';
+  document.getElementById('drawer-title').textContent=g.name;
+  document.getElementById('drawer-sub').textContent='Client Group';
+  document.getElementById('drawer-actions').innerHTML=`<button class="abt c" onclick="openGroupPkgModal()">+ Enable Package for Group</button>`;
   document.getElementById('drawer-body').innerHTML=h;
   openDrawer();
 }
