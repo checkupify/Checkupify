@@ -1340,10 +1340,10 @@ async function doReject(){
 // ══════════════════════════════════════
 const TESTS_LIST=['CBC (Complete Blood Count)','Lipid Profile','Thyroid Panel (T3/T4/TSH)','Vitamin D (25-OH)','HbA1c','Liver Function Test','Kidney Function Test','Chest X-Ray','ECG','Urine Routine Examination']
 let testStatuses={}
-let uploadAptId=null,uploadPatient=null,uploadTest=null
+let uploadAptId=null,uploadPatient=null,uploadTest=null,pickedFile=null
 
 function openUploadPanel(id,patient,test){
-  uploadAptId=id;uploadPatient=patient;uploadTest=test
+  uploadAptId=id;uploadPatient=patient;uploadTest=test;pickedFile=null
   testStatuses={}
   document.getElementById('up-title').textContent=patient?`Upload Report — ${patient}`:'Upload Report'
   document.getElementById('up-sub').textContent=id||'Select appointment'
@@ -1383,7 +1383,7 @@ function openUploadPanel(id,patient,test){
         </select>
       </div>
       <div style="border:2px dashed var(--border);border-radius:var(--r10);padding:24px;text-align:center;cursor:pointer;margin-bottom:12px" id="drop-zone" 
-           onclick="toast('i','File picker opened')"
+           onclick="document.getElementById('rep-file').click()"
            ondragover="this.style.borderColor='var(--teal)';event.preventDefault()"
            ondragleave="this.style.borderColor=''"
            ondrop="event.preventDefault();handleDrop(event)">
@@ -1391,6 +1391,7 @@ function openUploadPanel(id,patient,test){
         <div style="font-size:13px;font-weight:600;color:var(--slate)">Drop PDF here or click to upload</div>
         <div style="font-size:11px;color:var(--hint);margin-top:3px">PDF only · Max 20MB</div>
         <div id="file-name" style="font-size:12px;color:var(--teal);margin-top:6px;font-weight:600"></div>
+        <input type="file" id="rep-file" accept="application/pdf,image/png,image/jpeg" style="display:none" onchange="pickFile(this.files)">
       </div>
       <div class="fgrp"><label>Password (if any)</label><input placeholder="Leave blank if unprotected"></div>
       <div class="alert alert-b"><span>💡 <strong>Note:</strong> After upload, AI will automatically scrape and match test values. Your team will validate before patient can view.</span></div>
@@ -1404,9 +1405,12 @@ function closeUploadPanel(){
   document.getElementById('panel-ov').style.display='none'
 }
 
-function handleDrop(e){
-  const f=e.dataTransfer.files[0]
-  if(f){document.getElementById('file-name').textContent='📎 '+f.name}
+function handleDrop(e){ pickFile(e.dataTransfer.files) }
+function pickFile(files){
+  const f=files&&files[0]; if(!f)return
+  if(f.size>10*1024*1024){toast('e','File too large — max 10MB');return}
+  pickedFile=f
+  document.getElementById('file-name').textContent='📎 '+f.name+' ('+Math.round(f.size/1024)+' KB)'
 }
 
 function setTestSt(i,status,name){
@@ -1459,7 +1463,15 @@ async function submitUpload(){
     }))
     if(recs.length){ await SB.from('test_results').upsert(recs,{onConflict:'booking_id,test_name'}) }
     const newStage = (skipCount===0 && ndCount===0) ? 'Report Uploaded' : 'Partially Uploaded'
-    await SB.from('bookings').update({stage:newStage,updated_at:now}).eq('id',uploadAptId)
+    const patch={stage:newStage,updated_at:now}
+    if(pickedFile){
+      const safe=pickedFile.name.replace(/[^A-Za-z0-9._-]/g,'_')
+      const path=uploadAptId+'/'+Date.now()+'_'+safe
+      const {error:upErr}=await SB.storage.from('reports').upload(path,pickedFile,{upsert:true,contentType:pickedFile.type||'application/pdf'})
+      if(upErr){toast('e','File upload failed: '+upErr.message);return}
+      patch.report_url='storage:'+path; patch.report_uploaded_at=now
+    }
+    await SB.from('bookings').update(patch).eq('id',uploadAptId)
   }
   closeUploadPanel()
   await loadData(); renderDashReports(); renderPendingTable('all'); renderAllApt('all')
