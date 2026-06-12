@@ -1,4 +1,5 @@
 export interface Pkg { id:string;name:string;description:string|null;base_price:number;mrp:number;test_count:number;badge:string|null;active:boolean;fasting_required:boolean;home_collection:boolean;category:string|null;sort_order:number;corp?:boolean; }
 export interface Lab { id:string;name:string;city:string;address:string|null;nabl_certified:boolean;rating:number;avg_tat_hours:number;home_collection:boolean;home_collection_charge:number;phone:string|null; }
-export interface Booking { id:string;patient_name:string;patient_phone:string;appointment_date:string;slot_time:string;stage:string;sla_status:string;amount:number;collection_type:string;report_url:string|null;created_at:string;lab?:{name:string;city:string}|null;package?:{name:string}|null; }
+export interface Booking { id:string;patient_name:string;patient_phone:string;appointment_date:string;slot_time:string;stage:string;sla_status:string;amount:number;collection_type:string;report_url:string|null;created_at:string;lab?:{name:string;city:string}|null;package?:{name:string}|null;dependent_id?:string|null; }
+export interface Dependent { id:string;user_id:string;name:string;relationship:string;gender:string|null;dob:string|null; }
 export interface User { id:string;phone:string;name:string;email:string;gender:string;city:string;enterprise_id?:string|null;employee_code?:string|null;grade?:string|null; }

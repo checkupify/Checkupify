@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { fmt, fmtDate, fmtTime } from "@/lib/utils";
-import type { Pkg, Lab, Booking, User } from "@/types";
+import type { Pkg, Lab, Booking, User, Dependent } from "@/types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const N = "#0B2545";     // navy
@@ -20,6 +20,10 @@ const STAGES: Record<string, { bg: string; fg: string; label: string }> = {
   "Received":          { bg:"#F0FDF4", fg:"#15803D", label:"Report Ready ✓" },
   "Rejected":          { bg:"#FEF2F2", fg:"#DC2626", label:"Cancelled" },
   "No Show":           { bg:"#F9FAFB", fg:"#6B7280", label:"No Show" },
+  "Cancelled":         { bg:"#FEF2F2", fg:"#DC2626", label:"Cancelled" },
+  "Reports Received":  { bg:"#F0FDF4", fg:"#15803D", label:"Report Ready ✓" },
+  "Report Uploaded":   { bg:"#EFF6FF", fg:"#1D4ED8", label:"Processing" },
+  "Partially Uploaded":{ bg:"#FAF5FF", fg:"#7E22CE", label:"Partial Report" },
 };
 
 type Screen = "splash"|"otp"|"verify"|"home"|"packages"|"lab"|"slot"|"confirm"|"success"|"bookings"|"detail"|"reports"|"profile";
@@ -99,8 +103,8 @@ export default function App() {
       {screen === "confirm" && selPkg && selLab && <Confirm pkg={selPkg} lab={selLab} date={selDate} slot={selSlot} type={selType} user={user} onSuccess={id => { setDoneId(id); loadData(); go("success"); }} onBack={() => go("slot")} />}
       {screen === "success" && <Success id={doneId} onHome={() => { loadData(); go("home"); }} />}
       {screen === "bookings" && <Bookings bookings={bookings} loading={loading} onDetail={b => { setDetailB(b); go("detail"); }} onRefresh={() => loadData()} onNav={go} />}
-      {screen === "detail" && detailB && <Detail booking={detailB} onBack={() => go("bookings")} />}
-      {screen === "reports" && <Reports bookings={bookings.filter(b => b.report_url || b.stage === "Received")} onNav={go} />}
+      {screen === "detail" && detailB && <Detail booking={detailB} user={user} onChanged={() => loadData()} onBack={() => go("bookings")} />}
+      {screen === "reports" && <Reports user={user} bookings={bookings.filter(b => b.report_url || ["Received", "Reports Received", "Completed"].includes(b.stage))} onNav={go} />}
       {screen === "profile" && <Profile user={user} bookings={bookings} onSave={u => setUser(u)} onLogout={() => { setUser(null); go("otp"); }} onNav={go} />}
     </div>
   );
@@ -186,6 +190,44 @@ function StagePill({ stage }: { stage: string }) {
 }
 
 // ─── Splash ───────────────────────────────────────────────────────────────────
+const FLOW_STEPS = ["Booked", "Confirmed", "Processing", "Report Ready"];
+function stageStep(stage: string): number {
+  if (stage === "New") return 0;
+  if (["Confirmed", "In Progress"].includes(stage)) return 1;
+  if (["Report Uploaded", "Partially Uploaded", "Pending Reports", "Partially Received"].includes(stage)) return 2;
+  if (["Received", "Reports Received", "Completed"].includes(stage)) return 3;
+  return -1;
+}
+function StageTimeline({ stage }: { stage: string }) {
+  const step = stageStep(stage);
+  if (step < 0) return (
+    <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 12, padding: 11, textAlign: "center", fontSize: 13, fontWeight: 700, color: "#B91C1C" }}>
+      ✕ {stage === "Cancelled" ? "Booking cancelled" : stage}
+    </div>
+  );
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start" }}>
+      {FLOW_STEPS.map((st, i) => (
+        <div key={st} style={{ flex: 1, textAlign: "center", position: "relative" }}>
+          {i > 0 && <div style={{ position: "absolute", left: "-50%", right: "50%", top: 11, height: 3, background: i <= step ? G : "#E2E8F0" }} />}
+          <div style={{ width: 24, height: 24, borderRadius: "50%", margin: "0 auto", background: i <= step ? G : "white", border: `2.5px solid ${i <= step ? G : "#E2E8F0"}`, color: "white", fontSize: 12, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", zIndex: 1 }}>{i <= step ? "✓" : ""}</div>
+          <p style={{ fontSize: 10, fontWeight: 700, color: i <= step ? GD : "#94A3B8", marginTop: 5 }}>{st}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+async function openPatientReport(b: Booking, phone: string, setBusy?: (v: boolean) => void) {
+  if (!b.report_url) return;
+  if (!b.report_url.startsWith("storage:")) { window.open(b.report_url, "_blank"); return; }
+  setBusy?.(true);
+  const { data, error } = await supabase.functions.invoke("patient-report", { body: { booking_id: b.id, phone } });
+  setBusy?.(false);
+  const d = data as { url?: string; error?: string } | null;
+  if (error || !d?.url) { alert("Could not open report — " + (error?.message ?? d?.error ?? "please try again")); return; }
+  window.open(d.url, "_blank");
+}
+
 function Splash() {
   return (
     <div style={{ minHeight: "100svh", background: navyGrad, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -312,8 +354,8 @@ function OTPVerify({ phone, onDone, onBack }: { phone: string; onDone: (u: User)
 
 // ─── Home ─────────────────────────────────────────────────────────────────────
 function Home({ user, pkgs, bookings, loading, onNav, onRefresh }: { user: User; pkgs: Pkg[]; bookings: Booking[]; loading: boolean; onNav: (s: Screen) => void; onRefresh: () => void }) {
-  const upcoming = bookings.filter(b => !["Received", "Rejected"].includes(b.stage)).slice(0, 2);
-  const completed = bookings.filter(b => b.stage === "Received").length;
+  const upcoming = bookings.filter(b => !["Received", "Reports Received", "Completed", "Rejected", "Cancelled", "No Show"].includes(b.stage)).slice(0, 2);
+  const completed = bookings.filter(b => ["Received", "Reports Received", "Completed"].includes(b.stage)).length;
   const score = completed > 0 ? Math.min(100, 45 + completed * 11) : 0;
   const todayStr = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
 
@@ -668,6 +710,27 @@ function Confirm({ pkg, lab, date, slot, type, user, onSuccess, onBack }: { pkg:
   const [gender, setGender] = useState("Male");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [deps, setDeps] = useState<Dependent[]>([]);
+  const [selDep, setSelDep] = useState<Dependent | null>(null);
+  const [addingDep, setAddingDep] = useState(false);
+  const [depName, setDepName] = useState("");
+  const [depRel, setDepRel] = useState("spouse");
+  const [depGender, setDepGender] = useState("Female");
+  useEffect(() => {
+    supabase.from("dependents").select("*").eq("user_id", user.id)
+      .then(({ data }) => setDeps((data ?? []) as Dependent[]));
+  }, [user.id]);
+  async function addDependent() {
+    if (!depName.trim()) return;
+    const { data, error: de } = await supabase.from("dependents")
+      .insert({ user_id: user.id, name: depName.trim(), relationship: depRel, gender: depGender })
+      .select().single();
+    if (de || !data) { setErr(de?.message ?? "Could not add family member"); return; }
+    const d = data as Dependent;
+    setDeps(v => [...v, d]); setSelDep(d); setName(d.name); setGender(d.gender || "Female");
+    setAddingDep(false); setDepName("");
+  }
+  const chip = (on: boolean): React.CSSProperties => ({ padding: "8px 13px", borderRadius: 999, border: `1.5px solid ${on ? G : "#E2E8F0"}`, background: on ? "#F0FDF4" : "white", color: on ? GD : "#64748B", fontSize: 13, fontWeight: 700, fontFamily: "inherit", cursor: "pointer" });
   const charge = type === "Home Collection" ? (lab.home_collection_charge || 0) : 0;
   const total = pkg.base_price + charge;
 
@@ -678,7 +741,7 @@ function Confirm({ pkg, lab, date, slot, type, user, onSuccess, onBack }: { pkg:
     setLoading(true); setErr("");
     const id = "CK" + Date.now().toString(36).toUpperCase().slice(-8);
     const { error } = await supabase.from("bookings").insert({
-      id, lab_id: lab.id, package_id: pkg.id,
+      id, lab_id: lab.id, package_id: pkg.id, dependent_id: selDep?.id ?? null,
       patient_name: name.trim(), patient_age: parseInt(age) || 0, patient_gender: gender,
       patient_phone: user.phone, appointment_date: date, slot_time: slot + ":00",
       collection_type: type, amount: total, discount: 0,
@@ -709,6 +772,31 @@ function Confirm({ pkg, lab, date, slot, type, user, onSuccess, onBack }: { pkg:
 
         {/* Patient details */}
         <div style={{ background: "white", borderRadius: 20, border: "1px solid #E2E8F0", boxShadow: "0 2px 8px rgba(11,37,69,.06)", padding: 18 }}>
+          <p style={{ fontSize: 12, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 14 }}>Who is this checkup for?</p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+            <button onClick={() => { setSelDep(null); setName(user.name || ""); setGender(user.gender || "Male"); }} style={chip(!selDep)}>👤 Myself</button>
+            {deps.map(d => (
+              <button key={d.id} onClick={() => { setSelDep(d); setName(d.name); setGender(d.gender || "Female"); }} style={chip(selDep?.id === d.id)}>
+                {d.relationship === "spouse" ? "💑" : d.relationship === "child" ? "🧒" : d.relationship === "father" || d.relationship === "mother" ? "👴" : "👥"} {d.name}
+              </button>
+            ))}
+            <button onClick={() => setAddingDep(v => !v)} style={chip(false)}>＋ Family member</button>
+          </div>
+          {addingDep && (
+            <div style={{ background: "#F8FAFC", border: "1px dashed #CBD5E1", borderRadius: 14, padding: 12, marginBottom: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+              <input value={depName} onChange={e => setDepName(e.target.value)} placeholder="Family member's name" style={inp} />
+              <div style={{ display: "flex", gap: 10 }}>
+                <select value={depRel} onChange={e => setDepRel(e.target.value)} style={{ ...inp, flex: 1 }}>
+                  <option value="spouse">Spouse</option><option value="child">Child</option>
+                  <option value="father">Father</option><option value="mother">Mother</option><option value="other">Other</option>
+                </select>
+                <select value={depGender} onChange={e => setDepGender(e.target.value)} style={{ ...inp, flex: 1 }}>
+                  <option>Female</option><option>Male</option><option>Other</option>
+                </select>
+              </div>
+              <Btn small onClick={addDependent}>Save family member</Btn>
+            </div>
+          )}
           <p style={{ fontSize: 12, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 14 }}>Patient Details</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div>
@@ -794,8 +882,8 @@ function Success({ id, onHome }: { id: string; onHome: () => void }) {
 // ─── My Bookings ─────────────────────────────────────────────────────────────
 function Bookings({ bookings, loading, onDetail, onRefresh, onNav }: { bookings: Booking[]; loading: boolean; onDetail: (b: Booking) => void; onRefresh: () => void; onNav: (s: Screen) => void }) {
   const [tab, setTab] = useState<"Active" | "Past">("Active");
-  const active = bookings.filter(b => !["Received", "Rejected", "No Show"].includes(b.stage));
-  const past = bookings.filter(b => ["Received", "Rejected", "No Show"].includes(b.stage));
+  const active = bookings.filter(b => !["Received", "Reports Received", "Completed", "Rejected", "Cancelled", "No Show"].includes(b.stage));
+  const past = bookings.filter(b => ["Received", "Reports Received", "Completed", "Rejected", "Cancelled", "No Show"].includes(b.stage));
   const shown = tab === "Active" ? active : past;
 
   return (
@@ -837,7 +925,7 @@ function Bookings({ bookings, loading, onDetail, onRefresh, onNav }: { bookings:
                 <span>⏰ {fmtTime(b.slot_time)}</span>
                 <span>💳 {fmt(b.amount)}</span>
               </div>
-              {b.stage === "Received" && (
+              {["Received", "Reports Received", "Completed"].includes(b.stage) && (
                 <div style={{ marginTop: 12, padding: "10px", borderRadius: 10, background: "#F0FDF4", textAlign: "center", fontSize: 13, fontWeight: 700, color: "#15803D" }}>
                   📄 Report ready — tap to view
                 </div>
@@ -852,17 +940,33 @@ function Bookings({ bookings, loading, onDetail, onRefresh, onNav }: { bookings:
 }
 
 // ─── Booking Detail ───────────────────────────────────────────────────────────
-function Detail({ booking: b, onBack }: { booking: Booking; onBack: () => void }) {
+function Detail({ booking: b, user, onChanged, onBack }: { booking: Booking; user: User; onChanged: () => void; onBack: () => void }) {
+  const [st, setSt] = useState(b.stage);
+  const [busy, setBusy] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  async function cancelBooking() {
+    if (!window.confirm("Cancel this booking? This cannot be undone.")) return;
+    setCancelling(true);
+    const { error } = await supabase.from("bookings")
+      .update({ stage: "Cancelled", status: "cancelled", updated_at: new Date().toISOString() })
+      .eq("id", b.id);
+    setCancelling(false);
+    if (error) { alert("Could not cancel — " + error.message); return; }
+    setSt("Cancelled"); onChanged();
+  }
   return (
     <div style={{ minHeight: "100svh", background: "#F0F4F8" }}>
       <div style={{ background: navyGrad, padding: "52px 20px 24px" }}>
         <BackHeader title="Booking Detail" subtitle={b.id} onBack={onBack} white />
       </div>
       <div style={{ padding: "16px 16px 40px", display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ background: "white", borderRadius: 20, border: "1px solid #E2E8F0", padding: "20px 14px 16px" }}>
+          <StageTimeline stage={st} />
+        </div>
         <div style={{ background: "white", borderRadius: 20, border: "1px solid #E2E8F0", padding: 18 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <p style={{ fontSize: 16, fontWeight: 800, color: N }}>{b.package?.name ?? "Health Checkup"}</p>
-            <StagePill stage={b.stage} />
+            <StagePill stage={st} />
           </div>
           {[
             ["Lab", b.lab?.name ?? "—"],
@@ -880,11 +984,14 @@ function Detail({ booking: b, onBack }: { booking: Booking; onBack: () => void }
           ))}
         </div>
         {b.report_url && (
-          <a href={b.report_url} target="_blank" rel="noreferrer" style={{ display: "block", textDecoration: "none" }}>
-            <div style={{ background: "#F0FDF4", border: "1.5px solid #BBF7D0", borderRadius: 16, padding: 16, textAlign: "center", fontSize: 15, fontWeight: 700, color: "#15803D" }}>
-              📄 View Report PDF →
-            </div>
-          </a>
+          <button onClick={() => openPatientReport(b, user.phone, setBusy)} disabled={busy} style={{ display: "block", width: "100%", background: "#F0FDF4", border: "1.5px solid #BBF7D0", borderRadius: 16, padding: 16, textAlign: "center", fontSize: 15, fontWeight: 700, color: "#15803D", fontFamily: "inherit", cursor: "pointer" }}>
+            {busy ? "Preparing secure link…" : "📄 View Report PDF →"}
+          </button>
+        )}
+        {["New", "Confirmed"].includes(st) && (
+          <button onClick={cancelBooking} disabled={cancelling} style={{ background: "white", border: "1.5px solid #FECACA", color: "#B91C1C", borderRadius: 16, padding: 14, fontSize: 14, fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}>
+            {cancelling ? "Cancelling…" : "Cancel this booking"}
+          </button>
         )}
         <div style={{ background: "#F0F4F8", borderRadius: 14, padding: "12px 16px" }}>
           <p style={{ fontSize: 12, color: "#94A3B8", marginBottom: 4 }}>Need help?</p>
@@ -896,7 +1003,7 @@ function Detail({ booking: b, onBack }: { booking: Booking; onBack: () => void }
 }
 
 // ─── Reports ─────────────────────────────────────────────────────────────────
-function Reports({ bookings, onNav }: { bookings: Booking[]; onNav: (s: Screen) => void }) {
+function Reports({ user, bookings, onNav }: { user: User; bookings: Booking[]; onNav: (s: Screen) => void }) {
   return (
     <div style={{ minHeight: "100svh", background: "#F0F4F8", paddingBottom: 80 }}>
       <div style={{ background: navyGrad, padding: "52px 20px 24px" }}>
@@ -916,9 +1023,7 @@ function Reports({ bookings, onNav }: { bookings: Booking[]; onNav: (s: Screen) 
             <p style={{ fontSize: 13, color: "#7A90B3", marginBottom: 4 }}>{b.lab?.name ?? "—"}</p>
             <p style={{ fontSize: 12, color: "#94A3B8", marginBottom: 12 }}>📅 {b.appointment_date}</p>
             {b.report_url ? (
-              <a href={b.report_url} target="_blank" rel="noreferrer" style={{ display: "block", textDecoration: "none" }}>
-                <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 12, padding: 11, textAlign: "center", fontSize: 13, fontWeight: 700, color: "#15803D" }}>📄 View Report PDF</div>
-              </a>
+              <button onClick={() => openPatientReport(b, user.phone)} style={{ display: "block", width: "100%", background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 12, padding: 11, textAlign: "center", fontSize: 13, fontWeight: 700, color: "#15803D", fontFamily: "inherit", cursor: "pointer" }}>📄 View Report PDF</button>
             ) : (
               <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 12, padding: 11, textAlign: "center", fontSize: 12, fontWeight: 700, color: "#D97706" }}>⏳ Processing — coming soon</div>
             )}
