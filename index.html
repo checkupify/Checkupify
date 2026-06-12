@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Checkupify — Operations Console</title>
+<title>Checkupify Atlas — Operations Command</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -206,7 +206,7 @@ tbody tr:hover td{background:#FAFBFC}
   <div class="lg-card">
     <div style="display:flex;align-items:center;gap:11px;margin-bottom:24px">
       <div style="width:42px;height:42px;border-radius:12px;background:var(--teal);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:17px">CK</div>
-      <div><div style="font-size:17px;font-weight:800">Checkupify</div><div style="font-size:11px;color:var(--hint)">Operations Console · CRM</div></div>
+      <div><div style="font-size:17px;font-weight:800">Checkupify <span style="color:var(--teal-d)">Atlas</span></div><div style="font-size:11px;color:var(--hint)">Operations Command · crm.checkupify.com</div></div>
     </div>
     <div style="font-size:23px;font-weight:800;margin-bottom:4px">Welcome back</div>
     <div style="font-size:13px;color:var(--hint);margin-bottom:22px">Sign in with your staff credentials</div>
@@ -223,7 +223,7 @@ tbody tr:hover td{background:#FAFBFC}
   <div class="sb-top">
     <div class="sb-logo">
       <div class="sb-ic">CK</div>
-      <div><div class="sb-brand-name">Checkupify</div><div class="sb-brand-sub">Operations Console</div></div>
+      <div><div class="sb-brand-name">Atlas</div><div class="sb-brand-sub">Checkupify Ops Command</div></div>
     </div>
   </div>
   <nav class="sb-nav">
@@ -303,7 +303,7 @@ tbody tr:hover td{background:#FAFBFC}
             <div style="padding:16px"><div class="chartbars" id="stage-chart"></div><div class="clabels" id="stage-labels"></div></div>
           </div>
           <div class="card">
-            <div class="card-head"><span class="card-title">Needs Action Now</span><button class="btn sm primary" onclick="nav('appointments')">Go to Operations</button></div>
+            <div class="card-head"><span class="card-title">⚡ Action Center</span><button class="btn sm primary" onclick="nav('appointments')">Go to Operations</button></div>
             <div class="tw"><table><thead><tr><th>Apt ID</th><th>Patient</th><th>Package</th><th>Stage</th><th>Action</th></tr></thead><tbody id="dash-action"></tbody></table></div>
           </div>
         </div>
@@ -956,12 +956,34 @@ function renderDashboard(){
   const clrs=['#6366F1','#10B981','#3B82F6','#F59E0B','#00CC8E','#EF4444'];
   document.getElementById('stage-chart').innerHTML=order.map((s,i)=>`<div class="cbar" title="${s}: ${vals[i]}" style="height:${Math.max(4,Math.round(vals[i]/max*112))}px;background:${clrs[i]}"></div>`).join('');
   document.getElementById('stage-labels').innerHTML=order.map((s,i)=>`<div class="clbl">${vals[i]}</div>`).join('');
-  // needs action
-  const na=BOOKINGS.filter(b=>stg(b)==='New').slice(0,6);
-  document.getElementById('dash-action').innerHTML=na.length?na.map(b=>`<tr>
-    <td class="mono">${esc(b.id)}</td><td style="font-weight:600">${esc(b.patient_name||'—')}</td>
-    <td style="font-size:12px">${esc(pkgName(b))}</td><td><span class="badge ${STAGE_CLR[stg(b)]}">${stg(b)}</span></td>
-    <td><button class="abt c" onclick="quickConfirm('${b.id}')">Confirm</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty">Nothing awaiting action 🎉</td></tr>';
+  // ⚡ Action Center: exceptions-first, across every module
+  const rows=[];
+  BOOKINGS.filter(b=>stg(b)==='New').slice(0,4).forEach(b=>rows.push(
+    `<tr><td class="mono">${esc(b.id)}</td><td style="font-weight:600">${esc(b.patient_name||'—')}</td>
+    <td style="font-size:12px">${esc(pkgName(b))}</td><td><span class="badge ${STAGE_CLR['New']}">Awaiting confirm</span></td>
+    <td><button class="abt c" onclick="quickConfirm('${b.id}')">Confirm</button></td></tr>`));
+  DISR.filter(d=>d.status==='active').forEach(d=>rows.push(
+    `<tr><td class="mono">DISRUPTION</td><td style="font-weight:600">${esc(labById(d.lab_id))}</td>
+    <td style="font-size:12px">${esc(d.dtype)} · ${esc(d.reason||'')}</td><td><span class="badge br">PROVIDER DOWN</span></td>
+    <td><button class="abt o" onclick="nav('partner');partnerSwitch('disruptions')">Manage</button></td></tr>`));
+  const unr=LEDGER.filter(l=>l.status==='unrated').length;
+  if(unr)rows.push(`<tr><td class="mono">RATE GAP</td><td style="font-weight:600">${unr} booking${unr>1?'s':''}</td>
+    <td style="font-size:12px">accrued without an agreement rate</td><td><span class="badge ba">UNRATED CREDIT</span></td>
+    <td><button class="abt o" onclick="nav('partner');partnerSwitch('agreements')">Fix Rate Card</button></td></tr>`);
+  PINV.filter(i=>i.status==='submitted').forEach(i=>rows.push(
+    `<tr><td class="mono">${esc(i.internal_ref)}</td><td style="font-weight:600">${esc(labById(i.lab_id))}</td>
+    <td style="font-size:12px">claims ${money(i.claimed_amount)} · variance ${money(i.variance)}</td><td><span class="badge bb">INVOICE TO APPROVE</span></td>
+    <td><button class="abt c" onclick="nav('finance')">Review</button></td></tr>`));
+  ENTS.filter(e=>(e.onboarding_stage||'prospect')!=='live').slice(0,3).forEach(e=>rows.push(
+    `<tr><td class="mono">ONBOARDING</td><td style="font-weight:600">${esc(e.name)}</td>
+    <td style="font-size:12px">stuck at ${esc(STAGE_LBL[e.onboarding_stage]||e.onboarding_stage)}</td><td><span class="badge ba">NOT LIVE</span></td>
+    <td><button class="abt o" onclick="nav('partner');partnerSwitch('enterprises');openEnterprise('${e.id}')">Advance</button></td></tr>`));
+  const invSet=new Set(CINV.map(i=>i.booking_id));
+  const ready=BOOKINGS.filter(b=>stg(b)==='Reports Received'&&!invSet.has(b.id)).length;
+  if(ready)rows.push(`<tr><td class="mono">BILLING</td><td style="font-weight:600">${ready} completed booking${ready>1?'s':''}</td>
+    <td style="font-size:12px">delivered but not yet invoiced to customer</td><td><span class="badge bt">READY TO INVOICE</span></td>
+    <td><button class="abt c" onclick="nav('finance')">Invoice</button></td></tr>`);
+  document.getElementById('dash-action').innerHTML=rows.length?rows.slice(0,10).join(''):'<tr><td colspan="5" class="empty">All clear — no exceptions anywhere 🎉</td></tr>';
   // network
   const top=LABS.slice(0,5);
   document.getElementById('dash-network').innerHTML=top.length?top.map(l=>`<div>
@@ -2041,7 +2063,22 @@ function toast(type,msg){
   const ic={s:'✓',e:'✕',i:'ℹ',w:'⚠'};t.innerHTML=`<span style="font-size:15px">${ic[type]||'ℹ'}</span><span style="flex:1">${esc(msg)}</span>`;
   c.appendChild(t);setTimeout(()=>{t.style.transform='translateX(120%)';t.style.opacity='0';setTimeout(()=>t.remove(),300)},3600);
 }
-async function refresh(){await loadAll();const cur=[...document.querySelectorAll('.page')].find(p=>p.classList.contains('show'));const name=cur?cur.id.replace('p-',''):'dashboard';nav(name);}
+let __syncing=false,__retried=false;
+async function refresh(){
+  if(__syncing)return;__syncing=true;
+  const t0=document.title;document.title='⟳ '+t0.replace(/^⟳ /,'');
+  try{
+    await loadAll();__retried=false;
+    const cur=[...document.querySelectorAll('.page')].find(p=>p.classList.contains('show'));
+    nav(cur?cur.id.replace('p-',''):'dashboard');
+  }catch(err){
+    console.error('[Atlas] sync failed',err);
+    toast('e','Sync failed — '+(err&&err.message||'network issue')+(__retried?'':' · retrying in 4s'));
+    if(!__retried){__retried=true;setTimeout(()=>{__syncing=false;refresh()},4000);}
+  }finally{document.title=t0.replace(/^⟳ /,'');__syncing=false;}
+}
+window.addEventListener('unhandledrejection',e=>{console.error('[Atlas]',e.reason);toast('e','Something went wrong — shown data may be stale');});
+SB.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT'){const g=document.getElementById('login-gate');if(g)g.style.display='flex';}});
 async function boot(){
   await loadAll();renderDashboard();renderAppointments('all');
   SB.channel('crm-live').on('postgres_changes',{event:'*',schema:'public',table:'bookings'},async()=>{await loadAll();const cur=[...document.querySelectorAll('.page')].find(p=>p.classList.contains('show'));const n=cur?cur.id.replace('p-',''):'dashboard';nav(n);}).subscribe();
