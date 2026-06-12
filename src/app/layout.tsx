@@ -3,7 +3,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Checkupify — Book Health Tests",
   description: "India's most trusted health checkup platform",
-  icons: { icon: "/favicon.png" },
+  icons: { icon: "/favicon.png", apple: "/icon-192.png" },
+  manifest: "/manifest.json",
 };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -17,7 +18,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <script dangerouslySetInnerHTML={{ __html:
+          "if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('SW',e)})})}"
+        }} />
+      </body>
     </html>
   );
 }
