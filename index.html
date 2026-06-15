@@ -1062,7 +1062,7 @@ async function loadData(){
              mask:r.masking_id, mrp:p.mrp||p.base_price, price:p.base_price||0,
              share:Math.round(+r.agreed_rate||0) }
   })
-  if(!PKG_DATA.length) PKG_DATA=(pk||[]).map(p=>({name:p.name,code:(p.slug||'PKG').toUpperCase().slice(0,14),mask:'—',mrp:p.mrp||p.base_price,price:p.base_price||0,share:0}))
+  if(!PKG_DATA.length) PKG_DATA=(pk||[]).map((p,i)=>{const w=p.name.toUpperCase().replace(/[^A-Z ]/g,' ').split(' ').filter(Boolean);const abbr=(w.slice(0,3).map(x=>x[0]).join('')+'XXX').slice(0,3);const mask='HFL-'+abbr+'-'+String(i+1).padStart(2,'0');return{name:p.name,code:(p.slug||'PKG').toUpperCase().slice(0,14),mask,mrp:p.mrp||p.base_price,price:p.base_price||0,share:0}})
 
   setLiveNumbers(rows)
 }
