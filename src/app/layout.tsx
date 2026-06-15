@@ -1,10 +1,29 @@
 import type { Metadata } from "next";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "Checkupify",
-  description: "Your Health. Simplified.",
-  icons: { icon: "/favicon.png", apple: "/favicon.png" },
+  title: "Checkupify — Book Health Tests",
+  description: "India's most trusted health checkup platform",
+  icons: { icon: "/favicon.png", apple: "/icon-192.png" },
+  manifest: "/manifest.json",
 };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return <html lang="en"><body style={{margin:0,padding:0}}>{children}</body></html>;
+  return (
+    <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <meta name="theme-color" content="#0B2545" />
+        <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      </head>
+      <body>
+        {children}
+        <script dangerouslySetInnerHTML={{ __html:
+          "if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(e){console.warn('SW',e)})})}"
+        }} />
+      </body>
+    </html>
+  );
 }
