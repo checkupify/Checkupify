@@ -163,6 +163,16 @@ tbody tr:hover td{background:#FAFBFC}
 .cbar:hover{opacity:.78}
 .clabels{display:flex;gap:6px;margin-top:6px}
 .clbl{flex:1;font-size:10px;color:var(--hint);text-align:center}
+.entpane{display:none}.entpane.show{display:block}
+.modal-lg{max-width:690px;width:94%}
+.tgl-row{display:flex;align-items:center;justify-content:space-between;padding:11px 2px;border-bottom:1px solid var(--bord2);font-size:14px;font-weight:600;color:var(--slate)}
+.sw{position:relative;display:inline-block;width:40px;height:22px;flex:none}
+.sw input{opacity:0;width:0;height:0}
+.sw>span{position:absolute;inset:0;background:#CBD5E1;border-radius:22px;transition:.2s;cursor:pointer}
+.sw>span:before{content:"";position:absolute;height:16px;width:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.sw input:checked+span{background:var(--teal)}
+.sw input:checked+span:before{transform:translateX(18px)}
+.rad{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--slate);cursor:pointer}
 /* LOGIN */
 #login-gate{display:none;position:fixed;inset:0;z-index:2000;background:linear-gradient(155deg,#0B2545,#1B4B8A);align-items:center;justify-content:center}
 .lg-card{background:#fff;border-radius:18px;padding:36px 34px;width:100%;max-width:400px;box-shadow:0 30px 70px rgba(0,0,0,.35)}
@@ -214,7 +224,12 @@ tbody tr:hover td{background:#FAFBFC}
     <div class="fgrp"><label>Password</label><input id="lg-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div id="lg-err" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:6px"></div>
     <button id="lg-btn" class="btn primary" style="width:100%;justify-content:center;padding:12px" onclick="doLogin()">Sign in →</button>
-    <div style="margin-top:18px;padding:11px;background:var(--s2);border:1px solid var(--border);border-radius:9px;text-align:center;font-size:12px;color:var(--hint)">admin@ · ops@ · system@ · partner@ · finance@ checkupify.com<br>password <code style="color:var(--teal-d)">Checkupify@2026</code></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn sm" style="flex:1;justify-content:center" onclick="ql('admin@checkupify.com')">Admin</button>
+      <button class="btn sm" style="flex:1;justify-content:center" onclick="ql('ops@checkupify.com')">Ops</button>
+      <button class="btn sm" style="flex:1;justify-content:center" onclick="ql('supply@checkupify.com')">Supply</button>
+    </div>
+    <div style="margin-top:12px;padding:10px;background:var(--s2);border:1px solid var(--border);border-radius:9px;text-align:center;font-size:12px;color:var(--hint)">Admin &middot; Ops &middot; Supply &nbsp;(+ system@ &middot; finance@)<br>password <code style="color:var(--teal-d)">Checkupify@2026</code></div>
   </div>
 </div>
 
@@ -478,7 +493,7 @@ tbody tr:hover td{background:#FAFBFC}
         <div class="card" style="margin-bottom:16px">
           <div class="card-head"><span class="card-title">Company → Package Mapping</span><button class="btn sm primary" onclick="openCpkgModal()">+ Map Package to Company</button></div>
           <div class="alert alert-b" style="margin:12px 14px"><span>This is what an employee sees in the patient app: a package is bookable by a company's staff only if it's mapped here, at the negotiated employee price.</span></div>
-          <div class="tw"><table><thead><tr><th>Company</th><th>Package</th><th>Grade</th><th>Employee Price</th><th>Annual Limit</th><th>Status</th><th></th></tr></thead><tbody id="cpkg-table"></tbody></table></div>
+          <div class="tw"><table><thead><tr><th>Company</th><th>Package</th><th>Grade</th><th>Cost</th><th>Employee Price</th><th>Margin</th><th>Annual Limit</th><th>Status</th><th></th></tr></thead><tbody id="cpkg-table"></tbody></table></div>
         </div>
         <div class="card">
           <div class="card-head"><span class="card-title">Provider → Package Offerings</span><span style="font-size:11px;color:var(--hint)">which labs can fulfil which packages, at what cost</span></div>
@@ -644,28 +659,66 @@ tbody tr:hover td{background:#FAFBFC}
 
 <!-- CREATE ENTERPRISE MODAL -->
 <div class="ov" id="ent-modal" onclick="if(event.target===this)closeMod('ent-modal')">
-  <div class="modal modal-md">
-    <div class="mhead"><div><div class="mtitle">New Enterprise</div><div style="font-size:12px;color:var(--hint);margin-top:3px">Create a corporate / diagnostic enterprise</div></div><button class="mclose" onclick="closeMod('ent-modal')">✕</button></div>
+  <div class="modal modal-lg">
+    <div class="mhead"><div><div class="mtitle">New Enterprise</div><div style="font-size:12px;color:var(--hint);margin-top:3px">Onboard a corporate / diagnostic / partner enterprise</div></div><button class="mclose" onclick="closeMod('ent-modal')">&#10005;</button></div>
     <div class="mbody">
-      <div class="frow f2">
-        <div class="fgrp"><label>Enterprise name <span class="req">*</span></label><input id="en-name" placeholder="e.g. Apollo Diagnostics"></div>
-        <div class="fgrp"><label>Type</label><select id="en-type"><option>Corporate</option><option>Diagnostic Chain</option><option>Hospital</option><option>SME</option></select></div>
+      <div class="seg" style="margin-bottom:14px"><button class="on" data-et="basic" onclick="entTab('basic',this)">Basic Details</button><button data-et="perm" onclick="entTab('perm',this)">Permissions</button></div>
+      <div class="entpane show" id="et-basic">
+        <div class="frow f2">
+          <div class="fgrp"><label>Enterprise Name <span class="req">*</span></label><input id="en-name" placeholder="e.g. Apollo Diagnostics"></div>
+          <div class="fgrp"><label>Enterprise Display Name <span class="req">*</span></label><input id="en-dname" placeholder="Shown to employees"></div>
+        </div>
+        <div class="frow f2">
+          <div class="fgrp"><label>Single Point of Contact Name <span class="req">*</span></label><input id="en-poc" placeholder="Contact person"></div>
+          <div class="fgrp"><label>Service Type <span class="req">*</span></label><select id="en-svc"><option value="">Select a Type</option><option>Body</option><option>Vision</option><option>Dental</option><option>Consultation</option></select></div>
+        </div>
+        <div class="frow f2">
+          <div class="fgrp"><label>Enterprise Type</label><select id="en-ptype"><option value="">Select Enterprise Type</option><option>Consultations Partner</option><option>Dental Care Partner</option><option>Diagnostic Centre</option><option>Fitness Partner</option><option>Home collection Partner</option><option>Home Vaccination Partner</option><option>Hospital</option><option>Inclinic Vaccination Partner</option><option>ISOS</option><option>Mental Wellness Partner</option><option>Onsite</option><option>PCR</option><option>Vision Care Partner</option></select></div>
+          <div class="fgrp"><label>Enterprise Tag</label><select id="en-tag"><option value="">Select Enterprise Tag</option><option>DC</option><option>Doctor consultation</option><option>Dental</option><option>EAP</option><option>Gyms</option><option>Home collection</option><option>Hospital</option><option>PCR</option><option>Radiology</option><option>Vaccination</option><option>Vision</option></select></div>
+        </div>
+        <div class="frow f2">
+          <div class="fgrp"><label>Contact Number <span class="req">*</span></label><input id="en-phone" placeholder="+91..."></div>
+          <div class="fgrp"><label>Email <span class="req">*</span></label><input id="en-email" type="email" placeholder="poc@company.com"></div>
+        </div>
+        <div class="frow f2">
+          <div class="fgrp"><label>Finance POC Email</label><input id="en-femail" type="email" placeholder="finance@company.com"></div>
+          <div class="fgrp"><label>Relationship Manager</label><input id="en-rm" placeholder="RM name"></div>
+        </div>
+        <div class="frow f2">
+          <div class="fgrp"><label>Slot Window (days) <span class="req">*</span></label><input id="en-slot" type="number" max="30" placeholder="max 30"><div style="font-size:11px;color:var(--hint);margin-top:3px">Max 30 days allowed</div></div>
+          <div class="fgrp"><label>Category</label><select id="en-type"><option>Corporate</option><option>Government</option><option>Hospital</option><option>Insurance</option></select></div>
+        </div>
+        <div class="frow f2">
+          <div class="fgrp"><label>Region</label><input id="en-region" placeholder="Hyderabad / South / Pan-India"></div>
+          <div class="fgrp"><label>Parent Enterprise</label><select id="en-parent"><option value="">- none -</option></select></div>
+        </div>
+        <div class="frow f2">
+          <div class="fgrp"><label>Contract Start</label><input id="en-cs" type="date"></div>
+          <div class="fgrp"><label>Contract End</label><input id="en-ce" type="date"></div>
+        </div>
+        <div class="fgrp"><label>Sales Mail IDs</label><input id="en-sales" placeholder="comma-separated emails"></div>
+        <div class="frow f2">
+          <div class="fgrp"><label>Operations Mail IDs</label><input id="en-ops" placeholder="comma-separated"></div>
+          <div class="fgrp"><label>Operations CC Mail IDs</label><input id="en-opscc" placeholder="comma-separated"></div>
+        </div>
+        <div class="fgrp"><label>Logo URL</label><input id="en-logo" placeholder="https://.../logo.png"></div>
       </div>
-      <div class="frow f2">
-        <div class="fgrp"><label>POC name</label><input id="en-poc" placeholder="Point of contact"></div>
-        <div class="fgrp"><label>POC phone</label><input id="en-phone" placeholder="+91…"></div>
+      <div class="entpane" id="et-perm">
+        <div class="tgl-row"><span>Auto confirmation</span><label class="sw"><input type="checkbox" id="en-f-autoconfirm"><span></span></label></div>
+        <div class="tgl-row"><span>Enforced End Date</span><label class="sw"><input type="checkbox" id="en-f-enforceend"><span></span></label></div>
+        <div class="tgl-row"><span>NABL Certified</span><label class="sw"><input type="checkbox" id="en-f-nabl"><span></span></label></div>
+        <div class="tgl-row"><span>ISO Certified</span><label class="sw"><input type="checkbox" id="en-f-iso"><span></span></label></div>
+        <div class="tgl-row"><span>NABH Certified</span><label class="sw"><input type="checkbox" id="en-f-nabh"><span></span></label></div>
+        <div class="tgl-row"><span>Trusted Partner</span><label class="sw"><input type="checkbox" id="en-f-trusted"><span></span></label></div>
+        <div class="tgl-row"><span>Facility Email Enabled</span><label class="sw"><input type="checkbox" id="en-f-facemail"><span></span></label></div>
+        <div class="fgrp" style="margin-top:16px"><label>Network Type</label>
+          <div style="display:flex;gap:20px;padding-top:5px">
+            <label class="rad"><input type="radio" name="en-net" value="Standard" checked> Standard</label>
+            <label class="rad"><input type="radio" name="en-net" value="Premium"> Premium</label>
+            <label class="rad"><input type="radio" name="en-net" value="Super Premium"> Super Premium</label>
+          </div>
+        </div>
       </div>
-      <div class="fgrp"><label>POC email</label><input id="en-email" type="email" placeholder="poc@company.com"></div>
-      <div class="fgrp"><label>Region</label><input id="en-region" placeholder="e.g. Hyderabad / South / Pan-India"></div>
-      <div class="frow f2">
-        <div class="fgrp"><label>Contract start</label><input id="en-cs" type="date"></div>
-        <div class="fgrp"><label>Contract end</label><input id="en-ce" type="date"></div>
-      </div>
-      <div class="frow f2">
-        <div class="fgrp"><label>Discount %</label><input id="en-disc" type="number" placeholder="e.g. 15"></div>
-        <div class="fgrp"><label>Annual quota / employee</label><input id="en-quota" type="number" placeholder="e.g. 2"></div>
-      </div>
-      <div class="alert alert-b"><span>After creating, open the enterprise to add providers (branches), map packages and set facilities. MOU / PAN / cheque upload is a Phase-2 storage step.</span></div>
     </div>
     <div class="mfoot"><button class="btn" onclick="closeMod('ent-modal')">Cancel</button><button class="btn primary" onclick="createEnterprise()">Create Enterprise</button></div>
   </div>
@@ -709,7 +762,12 @@ tbody tr:hover td{background:#FAFBFC}
         <div class="fgrp"><label>Employee grade</label><input id="cp-grade" list="grade-opts" placeholder="blank = all grades"><datalist id="grade-opts"></datalist></div>
         <div class="fgrp"><label>Annual limit</label><input id="cp-limit" type="number" value="2"></div>
       </div>
-      <div class="fgrp"><label>Employee price (₹)</label><input id="cp-price" type="number"></div>
+      <div class="fgrp"><label>Cost (provider rate)</label><input id="cp-cost" type="number" readonly style="background:var(--s2)"><div style="font-size:11px;color:var(--hint);margin-top:3px" id="cp-cost-src"></div></div>
+      <div class="frow f2">
+        <div class="fgrp"><label>Margin %</label><input id="cp-margin" type="number" oninput="cpMarginToPrice()" placeholder="e.g. 15"></div>
+        <div class="fgrp"><label>Employee Price (₹)</label><input id="cp-price" type="number" oninput="cpPriceToMargin()"></div>
+      </div>
+      <div id="cp-mhint" style="font-size:12px;font-weight:700;color:var(--teal-d);margin-top:2px"></div>
     </div>
     <div class="mfoot"><button class="btn" onclick="closeMod('cpkg-modal')">Cancel</button><button class="btn primary" onclick="mapCompanyPackage()">Map Package</button></div>
   </div>
@@ -866,6 +924,14 @@ let AGRS=[],RATES=[],LEDGER=[],PINV=[];let curAgr=null;
 let EDOCS=[],DISR=[];
 let FACS=[],LABFACS=[],GROUPS=[],GMEMB=[];let curGroup=null;
 const GRADE_OPTS=['E1','E2','E3','M1','M2','L1','L2'];
+function entTab(t,el){document.querySelectorAll('#ent-modal .seg button').forEach(b=>b.classList.toggle('on',b.dataset.et===t));document.querySelectorAll('#ent-modal .entpane').forEach(p=>p.classList.toggle('show',p.id==='et-'+t))}
+function ql(e){var a=document.getElementById('lg-email');if(a)a.value=e;var p=document.getElementById('lg-pass');if(p)p.focus()}
+function pkgCost(id){const p=(typeof PACKAGES!=='undefined'?PACKAGES:[]).find(x=>x.id===id);return p?(p.tpa_price||Math.round((p.base_price||0)*0.7)):0}
+function marginCell(c){const cost=pkgCost(c.package_id);const price=c.employee_price||0;const m=price-cost;const pct=(c.margin_pct!=null)?c.margin_pct:(price?Math.round(m/price*1000)/10:0);const col=m<0?'var(--red)':'var(--teal-d)';return '<span style="font-weight:700;color:'+col+'">'+money(m)+'</span> <span style="font-size:11px;color:var(--hint)">'+pct+'%</span>'}
+function cpCost(){const o=document.getElementById('cp-pkg').selectedOptions[0];return o?Number(o.dataset.cost||o.dataset.price||0):0}
+function cpUpdateHint(){const cost=cpCost(),price=Number(document.getElementById('cp-price').value)||0;const m=price-cost;const pct=price?Math.round(m/price*1000)/10:0;const el=document.getElementById('cp-mhint');if(el)el.textContent=price?('Margin '+money(m)+' ('+pct+'%) per booking  ·  cost '+money(cost)):''}
+function cpMarginToPrice(){const cost=cpCost();const mp=Number(document.getElementById('cp-margin').value)||0;const price=mp>=100?cost:Math.round(cost/(1-mp/100));document.getElementById('cp-price').value=price;cpUpdateHint()}
+function cpPriceToMargin(){const cost=cpCost();const price=Number(document.getElementById('cp-price').value)||0;const pct=price?Math.round((price-cost)/price*1000)/10:0;document.getElementById('cp-margin').value=pct;cpUpdateHint()}
 const STAGE_FLOW=['prospect','docs','rates','test','live'];
 const STAGE_LBL={prospect:'Prospect',docs:'Docs Collection',rates:'Rate Card',test:'Test Booking',live:'LIVE'};
 const DOC_TYPES=[['mou','MOU (signed)'],['pan','PAN Card'],['gst','GST Certificate'],['cancelled_cheque','Cancelled Cheque']];
@@ -875,6 +941,7 @@ const ROLE_MODULES={
   OPS:['dashboard','appointments','digitization','customers','leads'],
   SYSTEM_SETUP:['dashboard','system','customers'],
   PARTNER_SETUP:['dashboard','partner'],
+  SUPPLY:['dashboard','partner','system','customers'],
   FINANCE:['dashboard','finance'],
   PROVIDER:['dashboard','digitization']
 };
@@ -1334,9 +1401,12 @@ function renderPartner(){
   document.getElementById('cpkg-table').innerHTML=CPKG.length?CPKG.map(c=>`<tr>
     <td style="font-weight:600">${esc(entName(c.enterprise_id)||'—')}</td><td>${esc(pkgById(c.package_id))}</td>
     <td>${c.grade?`<span class="badge bp">${esc(c.grade)}</span>`:'<span class="badge bgr">All</span>'}</td>
-    <td style="font-weight:700;color:var(--teal-d)">${money(c.employee_price)}</td><td>${c.annual_limit||'—'}</td>
+    <td style="color:var(--hint)">${money(pkgCost(c.package_id))}</td>
+    <td style="font-weight:700;color:var(--teal-d)">${money(c.employee_price)}</td>
+    <td>${marginCell(c)}</td>
+    <td>${c.annual_limit||'—'}</td>
     <td><span class="badge ${c.active!==false?'bg':'bgr'}">${c.active!==false?'Active':'Inactive'}</span></td>
-    <td style="text-align:right"><button class="abt r" onclick="unmapCpkg('${c.id}')">Remove</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No mappings yet</td></tr>';
+    <td style="text-align:right"><button class="abt r" onclick="unmapCpkg('${c.id}')">Remove</button></td></tr>`).join(''):'<tr><td colspan="9" class="empty">No mappings yet</td></tr>';
   // Provider-package offerings
   document.getElementById('labpkg-table').innerHTML=LABPKG.length?LABPKG.map(lp=>`<tr>
     <td style="font-weight:600">${esc(labById(lp.lab_id))}</td><td>${esc(pkgById(lp.package_id))}</td>
@@ -1591,22 +1661,52 @@ async function toggleFacility(labId,testId,cur){
   toast('s','Facility '+(next?'enabled':'disabled'));renderFacility();
 }
 // ── Create Enterprise ──
-function openEntModal(){['en-name','en-poc','en-email','en-phone','en-disc','en-quota','en-cs','en-ce'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});document.getElementById('en-type').value='Corporate';openMod('ent-modal')}
+function openEntModal(){
+  ['en-name','en-dname','en-poc','en-email','en-femail','en-phone','en-rm','en-slot','en-region','en-cs','en-ce','en-sales','en-ops','en-opscc','en-logo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  ['en-svc','en-ptype','en-tag'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  document.getElementById('en-type').value='Corporate';
+  ['autoconfirm','enforceend','nabl','iso','nabh','trusted','facemail'].forEach(k=>{const e=document.getElementById('en-f-'+k);if(e)e.checked=false});
+  const nr=document.querySelector('input[name=\'en-net\'][value=\'Standard\']');if(nr)nr.checked=true;
+  const pe=document.getElementById('en-parent');if(pe)pe.innerHTML='<option value="">- none -</option>'+ENTS.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  entTab('basic',document.querySelector('#ent-modal .seg button'));
+  openMod('ent-modal');
+}
 async function createEnterprise(){
   const name=document.getElementById('en-name').value.trim();
   if(!name)return toast('e','Enterprise name is required');
-  const rec={name,type:document.getElementById('en-type').value,
+  const arr=id=>{const v=document.getElementById(id).value.trim();return v?v.split(',').map(x=>x.trim()).filter(Boolean):null};
+  const slot=parseInt(document.getElementById('en-slot').value);
+  if(slot&&slot>30)return toast('e','Slot window can be max 30 days');
+  const rec={name,
+    display_name:document.getElementById('en-dname').value.trim()||name,
+    type:document.getElementById('en-type').value,
+    service_type:document.getElementById('en-svc').value||null,
+    partner_type:document.getElementById('en-ptype').value||null,
+    enterprise_tag:document.getElementById('en-tag').value||null,
     poc_name:document.getElementById('en-poc').value.trim()||null,
     poc_email:document.getElementById('en-email').value.trim()||null,
     poc_phone:document.getElementById('en-phone').value.trim()||null,
-    discount_pct:parseFloat(document.getElementById('en-disc').value)||null,
-    annual_quota_per_employee:parseInt(document.getElementById('en-quota').value)||null,
+    finance_poc_email:document.getElementById('en-femail').value.trim()||null,
+    relationship_manager:document.getElementById('en-rm').value.trim()||null,
+    slot_window_days:slot||null,
     region:document.getElementById('en-region').value.trim()||null,
+    parent_enterprise_id:document.getElementById('en-parent').value||null,
     contract_start:document.getElementById('en-cs').value||null,
-    contract_end:document.getElementById('en-ce').value||null, active:true};
+    contract_end:document.getElementById('en-ce').value||null,
+    sales_mail_ids:arr('en-sales'),ops_mail_ids:arr('en-ops'),ops_cc_mail_ids:arr('en-opscc'),
+    logo_url:document.getElementById('en-logo').value.trim()||null,
+    network_type:(document.querySelector('input[name="en-net"]:checked')||{}).value||'Standard',
+    flags:{auto_confirmation:document.getElementById('en-f-autoconfirm').checked,
+      enforced_end_date:document.getElementById('en-f-enforceend').checked,
+      nabl_certified:document.getElementById('en-f-nabl').checked,
+      iso_certified:document.getElementById('en-f-iso').checked,
+      nabh_certified:document.getElementById('en-f-nabh').checked,
+      trusted_partner:document.getElementById('en-f-trusted').checked,
+      facility_email_enabled:document.getElementById('en-f-facemail').checked},
+    active:true};
   const {error}=await SB.from('enterprises').insert(rec);
   if(error)return toast('e',error.message);
-  closeMod('ent-modal');toast('s','Enterprise “'+name+'” created');await refresh();
+  closeMod('ent-modal');toast('s','Enterprise "'+name+'" created');await refresh();
 }
 // ── Add Provider ──
 function openProvModal(entId){
@@ -1637,22 +1737,26 @@ async function addProvider(){
 function openCpkgModal(entId){
   const se=document.getElementById('cp-ent');se.innerHTML=ENTS.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
   if(entId)se.value=entId;
-  document.getElementById('cp-pkg').innerHTML=PACKAGES.map(p=>`<option value="${p.id}" data-price="${p.base_price||0}">${esc(p.name)} (${money(p.base_price)})</option>`).join('');
-  cpkgSync();document.getElementById('cp-limit').value='2';
+  document.getElementById('cp-pkg').innerHTML=PACKAGES.map(p=>`<option value="${p.id}" data-price="${p.base_price||0}" data-cost="${p.tpa_price||Math.round((p.base_price||0)*0.7)}">${esc(p.name)} (${money(p.base_price)})</option>`).join('');
+  document.getElementById('cp-limit').value='2';
   document.getElementById('cp-grade').value='';
   const dl=document.getElementById('grade-opts');if(dl&&!dl.children.length)GRADE_OPTS.forEach(g=>{const o=document.createElement('option');o.value=g;dl.appendChild(o)});
+  cpkgSync();
   openMod('cpkg-modal');
 }
-function cpkgSync(){const o=document.getElementById('cp-pkg').selectedOptions[0];if(o)document.getElementById('cp-price').value=Math.round((o.dataset.price||0)*0.85)}
+function cpkgSync(){const cost=cpCost();document.getElementById('cp-cost').value=cost;const o=document.getElementById('cp-pkg').selectedOptions[0];document.getElementById('cp-cost-src').textContent=o?('base '+money(o.dataset.price||0)):'';document.getElementById('cp-margin').value=15;cpMarginToPrice()}
 async function mapCompanyPackage(){
+  const price=parseFloat(document.getElementById('cp-price').value)||null;
+  const margin=parseFloat(document.getElementById('cp-margin').value);
   const rec={enterprise_id:document.getElementById('cp-ent').value,package_id:document.getElementById('cp-pkg').value,
-    employee_price:parseFloat(document.getElementById('cp-price').value)||null,
+    employee_price:price,
+    margin_pct:isNaN(margin)?null:margin,
     annual_limit:parseInt(document.getElementById('cp-limit').value)||null,
     grade:(document.getElementById('cp-grade').value.trim().toUpperCase())||null, active:true};
   if(!rec.enterprise_id||!rec.package_id)return toast('e','Pick a company and a package');
   const {error}=await SB.from('company_packages').upsert(rec,{onConflict:'enterprise_id,package_id,grade'});
   if(error)return toast('e',error.message);
-  closeMod('cpkg-modal');toast('s','Package mapped to company');await refresh();
+  closeMod('cpkg-modal');toast('s','Package mapped ('+(margin||0)+'% margin)');await refresh();
 }
 async function unmapCpkg(id){
   const {error}=await SB.from('company_packages').delete().eq('id',id);
