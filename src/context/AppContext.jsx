@@ -50,6 +50,7 @@ export function AppProvider({ children }) {
   }, [])
 
   const logout = useCallback(() => {
+    try { supabase.auth.signOut() } catch {}
     setUser(null)
     setAuthToken(null)
     localStorage.removeItem('ck_user')

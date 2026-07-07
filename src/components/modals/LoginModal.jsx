@@ -2,6 +2,17 @@ import { useState, useRef } from 'react'
 import { useApp } from '../../context/AppContext'
 import { supabase } from '../../lib/supabase'
 
+// Call an Edge Function and surface its JSON error messages cleanly
+async function callFn(name, body) {
+  const { data, error } = await supabase.functions.invoke(name, { body })
+  if (error) {
+    let msg = 'Something went wrong. Please try again.'
+    try { const j = await error.context.json(); if (j?.error) msg = j.error } catch {}
+    return { error: msg }
+  }
+  return { data }
+}
+
 export default function LoginModal() {
   const { modal, closeModal, login, addToast } = useApp()
   const [step, setStep] = useState('phone') // 'phone' | 'otp'
@@ -17,48 +28,40 @@ export default function LoginModal() {
   const sendOTP = async () => {
     if (phone.length !== 10) { addToast('error', 'Enter a valid 10-digit number'); return }
     setLoading(true)
-    try {
-      // Try Supabase phone auth
-      const { error } = await supabase.auth.signInWithOtp({ phone: `+91${phone}` })
-      if (error) throw error
-      addToast('success', `OTP sent to +91 ${phone} via WhatsApp & SMS`)
-    } catch {
-      // Demo mode - proceed anyway
-      addToast('success', `OTP sent to +91 ${phone} (Demo: use 123456)`)
-    } finally {
-      setLoading(false)
-      setStep('otp')
-    }
+    const { data, error } = await callFn('otp-request', { phone })
+    setLoading(false)
+    if (error) { addToast('error', error); return }
+    setStep('otp')
+    if (data?.debug_code) addToast('info', `Test code: ${data.debug_code}`)
+    else if (data?.delivered) addToast('success', `OTP sent to +91 ${phone} on WhatsApp`)
+    else addToast('info', 'Code generated. If it doesn’t arrive on WhatsApp, tap Resend.')
   }
 
   const verifyOTP = async () => {
     const code = otp.join('')
     if (code.length !== 6) { addToast('error', 'Enter all 6 digits'); return }
     setLoading(true)
-    try {
-      let user = null
-      try {
-        const { data, error } = await supabase.auth.verifyOtp({ phone: `+91${phone}`, token: code, type: 'sms' })
-        if (!error && data.user) user = data.user
-      } catch {}
-
-      // Demo fallback
-      if (!user && code === '123456') {
-        user = { id: 'demo_' + Date.now(), phone: `+91${phone}`, email: null }
-      }
-
-      if (user) {
-        const token = 'ck_' + btoa(`${phone}:${Date.now()}`)
-        const userData = { id: user.id, phone: `+91${phone}`, name: '', role: 'patient' }
-        login(userData, token)
-        addToast('success', '✅ Welcome to Checkupify!')
-        handleClose()
-      } else {
-        addToast('error', 'Invalid OTP. Try 123456 in demo mode.')
-      }
-    } finally {
+    const { data, error } = await callFn('otp-verify', { phone, code })
+    if (error) {
       setLoading(false)
+      setOtp(['','','','','',''])
+      otpRefs.current[0]?.focus()
+      addToast('error', error)
+      return
     }
+    // Establish the real Supabase session so the user is authenticated (RLS-scoped)
+    if (data?.session?.access_token) {
+      try {
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        })
+      } catch {}
+    }
+    setLoading(false)
+    login({ id: data?.user_id || null, phone: `+91${phone}`, name: '', role: 'patient' }, data?.session?.access_token || 'ck_session')
+    addToast('success', '✅ Welcome to Checkupify!')
+    handleClose()
   }
 
   const handleOtpChange = (val, idx) => {
@@ -108,12 +111,12 @@ export default function LoginModal() {
         ) : (
           <>
             <div className="modal-title">Enter OTP</div>
-            <div className="modal-sub">Sent to <strong>+91 {phone}</strong> via WhatsApp & SMS</div>
+            <div className="modal-sub">Sent to <strong>+91 {phone}</strong> on WhatsApp</div>
             <div className="otp-boxes">
               {otp.map((d, i) => (
                 <input
                   key={i} className={`otp-box${d ? ' filled' : ''}`}
-                  maxLength={1} value={d}
+                  maxLength={1} value={d} inputMode="numeric"
                   ref={el => otpRefs.current[i] = el}
                   onChange={e => handleOtpChange(e.target.value, i)}
                   onKeyDown={e => handleOtpKey(e, i)}
