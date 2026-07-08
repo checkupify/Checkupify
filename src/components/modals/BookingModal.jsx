@@ -51,27 +51,26 @@ export default function BookingModal() {
     if (!user) { closeModal(); openModal('login'); return }
     setLoading(true)
     try {
-      const booking = {
-        user_id: user.id,
+      const payload = {
         item_type: bookingItem.type,
         item_id: bookingItem.id,
         item_name: bookingItem.name,
         patient_name: form.name,
         patient_age: parseInt(form.age),
         patient_gender: form.gender,
+        patient_phone: user.phone,
         collection_type: form.collType,
         address: form.address || null,
-        date, slot,
+        appointment_date: date,
+        slot_time: slot,
         amount: finalPrice,
-        payment_method: payMethod,
-        status: 'confirmed',
         promo_code: discount > 0 ? promo : null,
       }
 
       let id = 'CHK-' + Math.random().toString(36).substr(2,6).toUpperCase()
       try {
-        const { data, error } = await supabase.from('bookings').insert(booking).select('id').single()
-        if (!error && data) id = 'CHK-' + data.id.toString().slice(-6).toUpperCase()
+        const { data, error } = await supabase.functions.invoke('create-booking', { body: payload })
+        if (!error && data?.code) id = data.code
       } catch {}
 
       setBookingId(id)
