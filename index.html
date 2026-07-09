@@ -174,15 +174,6 @@ tbody tr:hover td{background:#FAFBFC}
 .sw input:checked+span:before{transform:translateX(18px)}
 .rad{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--slate);cursor:pointer}
 
-.mfa-box{display:none;flex-direction:column;align-items:center;gap:14px;padding:8px 0}
-.mfa-box.show{display:flex}
-.otp-row{display:flex;gap:10px;justify-content:center}
-.otp-d{width:44px;height:52px;border:2px solid var(--border);border-radius:10px;font-size:22px;font-weight:800;text-align:center;background:var(--s2);color:var(--ink,#0F172A);outline:none;transition:border .15s}
-.otp-d:focus{border-color:var(--teal,#00CC8E)}
-.otp-d.filled{border-color:var(--teal,#00CC8E);background:#fff}
-.mfa-hint{font-size:12px;color:var(--hint,#94A3B8);text-align:center}
-.mfa-resend{font-size:12px;font-weight:700;color:var(--teal,#00CC8E);cursor:pointer;background:none;border:none;padding:0}
-.mfa-resend:hover{text-decoration:underline}
 
 /* LOGIN */
 #login-gate{display:none;position:fixed;inset:0;z-index:2000;background:linear-gradient(155deg,#0B2545,#1B4B8A);align-items:center;justify-content:center}
@@ -217,6 +208,19 @@ tbody tr:hover td{background:#FAFBFC}
 .subpane{display:none}.subpane.show{display:block}
 .chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;background:var(--teal-l);color:var(--teal-d);font-size:12px;font-weight:600;margin:0 6px 6px 0}
 .mini-card{border:1px solid var(--border);border-radius:var(--r10);padding:12px 14px;margin-bottom:9px}
+
+#pw-step.hide{display:none}
+#mfa-step{display:none}
+#mfa-step.show{display:block}
+.mfa-ic{width:52px;height:52px;border-radius:50%;background:var(--teal-l);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px}
+.otp-row{display:flex;gap:9px;justify-content:center;margin:18px 0 4px}
+.otp-d{width:46px;height:56px;border:2px solid var(--border);border-radius:12px;font-size:23px;font-weight:800;text-align:center;background:var(--s2);color:var(--ink);outline:none;transition:border-color .12s,background .12s;font-family:inherit;padding:0}
+.otp-d:focus{border-color:var(--teal);background:#fff;box-shadow:0 0 0 4px rgba(0,204,142,.12)}
+.otp-d.filled{border-color:var(--teal);background:#fff}
+.otp-d.err{border-color:var(--red);background:var(--redbg)}
+.mfa-link{font-size:12.5px;font-weight:700;color:var(--teal-d);cursor:pointer;background:none;border:none;padding:0;font-family:inherit}
+.mfa-link:hover{text-decoration:underline}
+.mfa-link[disabled]{color:var(--hint);cursor:default;text-decoration:none}
 </style>
 </head>
 <body>
@@ -231,6 +235,7 @@ tbody tr:hover td{background:#FAFBFC}
     </div>
     <div style="font-size:23px;font-weight:800;margin-bottom:4px">Welcome back</div>
     <div style="font-size:13px;color:var(--hint);margin-bottom:22px">Sign in with your staff credentials</div>
+    <div id="pw-step">
     <div class="fgrp"><label>Email</label><input id="lg-email" type="email" value="ops@checkupify.com"></div>
     <div class="fgrp"><label>Password</label><input id="lg-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div id="lg-err" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:6px"></div>
@@ -241,6 +246,23 @@ tbody tr:hover td{background:#FAFBFC}
       <button class="btn sm" style="flex:1;justify-content:center" onclick="ql('supply@checkupify.com')">Supply</button>
     </div>
     <div style="margin-top:12px;padding:10px;background:var(--s2);border:1px solid var(--border);border-radius:9px;text-align:center;font-size:12px;color:var(--hint)">Admin &middot; Ops &middot; Supply &nbsp;(+ system@ &middot; finance@)<br>password <code style="color:var(--teal-d)">Checkupify@2026</code></div>
+    </div>
+
+    <div id="mfa-step">
+      <div style="text-align:center">
+        <div class="mfa-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3 7l9 6 9-6" stroke="#00A873" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="5" width="18" height="14" rx="2.5" stroke="#00A873" stroke-width="2"/></svg></div>
+        <div style="font-size:19px;font-weight:800;color:var(--ink)">Check your email</div>
+        <div style="font-size:13px;color:var(--hint);margin-top:5px;line-height:1.5">We sent a 6-digit code to<br><span id="mfa-email-hint" style="color:var(--ink);font-weight:700"></span></div>
+      </div>
+      <div class="otp-row" id="mfa-otp-row"><input class="otp-d" maxlength="1" inputmode="numeric" autocomplete="one-time-code" data-i="0"><input class="otp-d" maxlength="1" inputmode="numeric" autocomplete="one-time-code" data-i="1"><input class="otp-d" maxlength="1" inputmode="numeric" autocomplete="one-time-code" data-i="2"><input class="otp-d" maxlength="1" inputmode="numeric" autocomplete="one-time-code" data-i="3"><input class="otp-d" maxlength="1" inputmode="numeric" autocomplete="one-time-code" data-i="4"><input class="otp-d" maxlength="1" inputmode="numeric" autocomplete="one-time-code" data-i="5"></div>
+      <div id="mfa-err" style="color:var(--red);font-size:12px;min-height:17px;text-align:center;margin-bottom:6px"></div>
+      <button id="mfa-btn" class="btn primary" style="width:100%;justify-content:center;padding:12px" onclick="mfaVerify()">Verify &amp; continue →</button>
+      <div style="margin-top:14px;text-align:center;font-size:12.5px;color:var(--hint)">
+        Didn't get it? <button class="mfa-link" id="mfa-resend" onclick="mfaResend()">Resend code</button>
+        &nbsp;·&nbsp; <button class="mfa-link" onclick="mfaBack()">Use another account</button>
+      </div>
+      <div style="margin-top:12px;padding:9px;background:var(--s2);border:1px solid var(--border);border-radius:9px;text-align:center;font-size:11.5px;color:var(--hint)">Code expires in 5 minutes · 5 attempts max</div>
+    </div>
   </div>
 </div>
 
@@ -324,7 +346,7 @@ tbody tr:hover td{background:#FAFBFC}
       </div>
       <div class="g21">
         <div class="fcol">
-          <div class="card" id="login-form">
+          <div class="card">
             <div class="card-head"><span class="card-title">Pipeline by Stage</span><span style="font-size:11px;color:var(--hint)">Live</span></div>
             <div style="padding:16px"><div class="chartbars" id="stage-chart"></div><div class="clabels" id="stage-labels"></div></div>
           </div>
@@ -2207,8 +2229,10 @@ async function doLogin(){
   // MFA step: send email OTP before granting access
   _mfaSession=data.session;
   var mfaRes=await _mfaCallFn('otp-request',{email:em,channel:'email',purpose:'staff_mfa'});
-  if(mfaRes.error){document.getElementById('lg-err').textContent='Could not send verification code. Try again.';return;}
-  toast('s','Verification code sent to '+em);_mfaShowStep(em);
+  if(mfaRes.error && !/wait a minute|already/i.test(mfaRes.error)){document.getElementById('lg-err').textContent=mfaRes.error;return;}
+  document.getElementById('lg-err').textContent='';
+  toast('s', mfaRes.error ? 'A code was already sent — check your inbox' : 'Verification code sent to '+em);
+  _mfaShowStep(em);
 }
 async function doLogout(){await SB.auth.signOut();location.reload()}
 async function setUser(email){
@@ -2242,72 +2266,107 @@ document.addEventListener('DOMContentLoaded',async()=>{
   else{document.getElementById('login-gate').style.display='flex';}
 });
 
-// ---- MFA (Email OTP second factor) ----
-var _mfaEmail='', _mfaSession=null;
+
+// ================= MFA (email OTP second factor) =================
+var _mfaEmail='', _mfaSession=null, _mfaTimer=null;
 var _MFA_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxndW91c3Ntc3VzYWR2bWV4amtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3Njc1OTcsImV4cCI6MjA5MDM0MzU5N30.Mq6nW2ItZqywuIbVeOUR9HQOglZOL5Wm0uSFwT6hfjw';
 var _MFA_BASE='https://lguoussmsusadvmexjkb.supabase.co/functions/v1';
 
 async function _mfaCallFn(name,body){
-  var r=await fetch(_MFA_BASE+'/'+name,{method:'POST',headers:{'Content-Type':'application/json','apikey':_MFA_ANON},body:JSON.stringify(body)});
-  return r.json().catch(function(){return {}});
+  try{
+    var r=await fetch(_MFA_BASE+'/'+name,{method:'POST',headers:{'Content-Type':'application/json','apikey':_MFA_ANON},body:JSON.stringify(body)});
+    var j=await r.json().catch(function(){return {};});
+    return j;
+  }catch(e){ return {error:'Network error. Check your connection.'}; }
 }
+function _mfaInputs(){ return Array.prototype.slice.call(document.querySelectorAll('#mfa-otp-row .otp-d')); }
+function _mfaErr(m){ var e=document.getElementById('mfa-err'); if(e)e.textContent=m||''; }
+function _mfaClear(){ _mfaInputs().forEach(function(i){i.value='';i.className='otp-d';}); }
 
 function _mfaShowStep(email){
   _mfaEmail=email;
-  document.getElementById('mfa-email-hint').textContent=email;
-  // hide pw form, show MFA box
-  var lf=document.getElementById('login-form')||document.querySelector('.card form');
-  if(lf)lf.style.display='none';
-  document.getElementById('mfa-box').classList.add('show');
-  // wire OTP inputs
-  var inputs=document.querySelectorAll('#mfa-otp-row .otp-d');
+  var hint=document.getElementById('mfa-email-hint'); if(hint)hint.textContent=email;
+  var pw=document.getElementById('pw-step'); if(pw)pw.classList.add('hide');
+  var ms=document.getElementById('mfa-step'); if(ms)ms.classList.add('show');
+  _mfaErr(''); _mfaClear();
+  var inputs=_mfaInputs();
   inputs.forEach(function(inp,i){
-    inp.value='';inp.className='otp-d';
     inp.oninput=function(){
       inp.value=inp.value.replace(/\D/g,'').slice(-1);
-      if(inp.value)inp.classList.add('filled'); else inp.classList.remove('filled');
+      inp.classList.toggle('filled',!!inp.value);
+      inp.classList.remove('err'); _mfaErr('');
       if(inp.value&&i<5)inputs[i+1].focus();
-      if(i===5&&inp.value&&Array.from(inputs).every(function(d){return d.value}))setTimeout(mfaVerify,120);
+      if(inputs.every(function(d){return d.value;}))setTimeout(mfaVerify,120);
     };
-    inp.onkeydown=function(e){if(e.key==='Backspace'&&!inp.value&&i>0)inputs[i-1].focus()};
+    inp.onkeydown=function(e){
+      if(e.key==='Backspace'&&!inp.value&&i>0){inputs[i-1].focus();inputs[i-1].value='';inputs[i-1].classList.remove('filled');}
+      if(e.key==='Enter')mfaVerify();
+    };
+    inp.onpaste=function(e){
+      e.preventDefault();
+      var t=(e.clipboardData||window.clipboardData).getData('text').replace(/\D/g,'').slice(0,6);
+      if(!t)return;
+      t.split('').forEach(function(ch,k){ if(inputs[k]){inputs[k].value=ch;inputs[k].classList.add('filled');} });
+      if(t.length===6)setTimeout(mfaVerify,120); else inputs[Math.min(t.length,5)].focus();
+    };
   });
-  setTimeout(function(){inputs[0].focus()},100);
+  setTimeout(function(){ if(inputs[0])inputs[0].focus(); },80);
+  _mfaCooldown(60);
+}
+
+function _mfaCooldown(sec){
+  var btn=document.getElementById('mfa-resend'); if(!btn)return;
+  if(_mfaTimer)clearInterval(_mfaTimer);
+  var left=sec;
+  btn.disabled=true; btn.textContent='Resend in '+left+'s';
+  _mfaTimer=setInterval(function(){
+    left--;
+    if(left<=0){clearInterval(_mfaTimer);btn.disabled=false;btn.textContent='Resend code';}
+    else btn.textContent='Resend in '+left+'s';
+  },1000);
+}
+
+function mfaBack(){
+  if(_mfaTimer)clearInterval(_mfaTimer);
+  var ms=document.getElementById('mfa-step'); if(ms)ms.classList.remove('show');
+  var pw=document.getElementById('pw-step'); if(pw)pw.classList.remove('hide');
+  _mfaSession=null; _mfaClear(); _mfaErr('');
+  try{ SB.auth.signOut(); }catch(e){}
 }
 
 async function mfaResend(){
-  var btn=document.querySelector('.mfa-resend');
-  if(btn)btn.textContent='Sending...';
+  var btn=document.getElementById('mfa-resend');
+  if(btn&&btn.disabled)return;
+  if(btn){btn.disabled=true;btn.textContent='Sending…';}
   var d=await _mfaCallFn('otp-request',{email:_mfaEmail,channel:'email',purpose:'staff_mfa'});
-  if(btn)btn.textContent='Resend code';
-  if(d.error)toast&&toast('e',d.error);
-  else toast&&toast('s','New code sent to '+_mfaEmail);
+  if(d.error){ _mfaErr(d.error); if(btn){btn.disabled=false;btn.textContent='Resend code';} return; }
+  _mfaClear(); _mfaErr(''); _mfaCooldown(60);
+  if(typeof toast==='function')toast('s','New code sent to '+_mfaEmail);
+  var inputs=_mfaInputs(); if(inputs[0])inputs[0].focus();
 }
 
 async function mfaVerify(){
-  var inputs=document.querySelectorAll('#mfa-otp-row .otp-d');
-  var code=Array.from(inputs).map(function(d){return d.value}).join('');
-  if(code.length!==6){toast&&toast('e','Enter all 6 digits');return;}
-  var btn=document.getElementById('mfa-verify-btn');
-  if(btn){btn.disabled=true;btn.textContent='Verifying...';}
+  var inputs=_mfaInputs();
+  var code=inputs.map(function(d){return d.value;}).join('');
+  if(code.length!==6){ _mfaErr('Enter all 6 digits'); return; }
+  var btn=document.getElementById('mfa-btn');
+  if(btn){btn.disabled=true;btn.textContent='Verifying…';}
   var d=await _mfaCallFn('otp-verify',{email:_mfaEmail,code:code,purpose:'staff_mfa'});
-  if(btn){btn.disabled=false;btn.textContent='Verify Code';}
-  if(d.error){
-    toast&&toast('e',d.error);
-    inputs.forEach(function(i){i.value='';i.classList.remove('filled')});
-    inputs[0].focus();
+  if(btn){btn.disabled=false;btn.textContent='Verify &amp; continue →';}
+  if(d.error||!d.success){
+    inputs.forEach(function(i){i.classList.add('err');});
+    _mfaErr(d.error||'Verification failed');
+    setTimeout(function(){_mfaClear(); if(inputs[0])inputs[0].focus();},600);
     return;
   }
-  // MFA passed — restore session that was stashed after password login
   if(_mfaSession){
-    await SB.auth.setSession({access_token:_mfaSession.access_token,refresh_token:_mfaSession.refresh_token});
+    try{ await SB.auth.setSession({access_token:_mfaSession.access_token,refresh_token:_mfaSession.refresh_token}); }catch(e){}
   }
-  toast&&toast('s','✅ Signed in');
-  document.getElementById('mfa-box').classList.remove('show');
-  // trigger app boot (each app checks session differently)
-  if(typeof initApp==='function')initApp();
-  else if(typeof loadDashboard==='function')loadDashboard();
-  else if(typeof boot==='function'){var em2=document.getElementById('lg-email').value.trim();ACTOR=em2;await setUser(em2);document.getElementById('login-gate').style.display='none';boot();}
-  else location.reload();
+  if(_mfaTimer)clearInterval(_mfaTimer);
+  if(typeof toast==='function')toast('s','Signed in');
+  ACTOR=_mfaEmail; await setUser(_mfaEmail);
+  document.getElementById('login-gate').style.display='none';
+  boot();
 }
 
 </script>
