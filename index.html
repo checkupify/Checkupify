@@ -635,9 +635,12 @@ tbody tr:hover td{background:#FAFBFC}
     <!-- ══════════ CATALOG & PRICING ══════════ -->
     <div class="page" id="p-pricing">
       <div class="phead"><div><div class="ptitle">Catalog &amp; Pricing</div><div class="psub">Masking IDs · provider cost · enterprise pricing &amp; margin</div></div>
-        <div style="display:flex;gap:8px"><button class="btn" onclick="loadPhase3(true)">↻ Refresh</button></div></div>
+        <div style="display:flex;gap:8px"><button class="btn" onclick="loadPhase3(true).then(renderPricing)">↻ Refresh</button><button class="btn primary" onclick="openNewTest()">+ New test</button></div></div>
+
+      <div id="pq-banner" style="margin-bottom:12px"></div>
+
       <div class="seg" style="margin-bottom:14px">
-        <button class="on" data-pt="catalog" onclick="pricingTab('catalog',this)">Catalog (93)</button>
+        <button class="on" data-pt="catalog" onclick="pricingTab('catalog',this)">Catalog</button>
         <button data-pt="cost" onclick="pricingTab('cost',this)">Provider Cost</button>
         <button data-pt="ent" onclick="pricingTab('ent',this)">Enterprise Pricing &amp; Margin</button>
       </div>
@@ -654,36 +657,100 @@ tbody tr:hover td{background:#FAFBFC}
               <option value="radiology_combo">Radiology combos</option>
             </select>
           </div>
-          <div style="overflow:auto"><table><thead><tr><th>Masking ID</th><th>Category</th><th>Name</th><th>Contents</th><th>List price</th><th>Best cost</th><th>Margin @ list</th></tr></thead><tbody id="cat-tbl"></tbody></table></div>
+          <div style="overflow:auto;max-height:62vh"><table><thead><tr><th>Masking ID</th><th>Category</th><th>Name</th><th>Contents</th><th>List price</th><th>Best cost</th><th>Margin @ list</th><th>Providers</th></tr></thead><tbody id="cat-tbl"></tbody></table></div>
         </div>
       </div>
 
       <div class="subpane" id="pt-cost">
         <div class="card">
-          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-            <select id="pc-lab" onchange="renderProvCost()" style="min-width:230px"></select>
-            <input id="pc-q" placeholder="Filter masking ID…" oninput="renderProvCost()" style="flex:1;min-width:170px">
-            <input id="pc-bulk" type="number" placeholder="% of list" style="width:110px">
-            <button class="btn" onclick="bulkCost()">Apply % to blanks</button>
-            <button class="btn primary" onclick="saveProvCost()">Save cost card</button>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+            <select id="pc-lab" onchange="pcSwitchLab()" style="min-width:210px"></select>
+            <select id="pc-filter" onchange="renderProvCost()" style="min-width:160px">
+              <option value="gaps">Needs pricing</option>
+              <option value="all">All items</option>
+              <option value="priced">Priced</option>
+              <option value="off">Not offered</option>
+            </select>
+            <input id="pc-q" placeholder="Filter…" oninput="renderProvCost()" style="flex:1;min-width:140px">
+            <button class="btn" onclick="openClone()">Clone from…</button>
+            <button class="btn" onclick="openCsv()">Import CSV</button>
           </div>
-          <div class="alert alert-a" style="margin-bottom:10px"><span>Centre price = what this provider charges Checkupify (your <b>cost</b>). Never shown to patients or TPAs.</span></div>
-          <div style="overflow:auto;max-height:60vh"><table><thead><tr><th>Masking ID</th><th>Name</th><th>List price</th><th>Centre price (cost)</th><th>Margin @ list</th><th>Active</th></tr></thead><tbody id="pc-tbl"></tbody></table></div>
+          <div id="pc-cover" style="margin-bottom:10px"></div>
+          <div class="alert alert-a" style="margin-bottom:10px"><span>Centre price = what this provider charges Checkupify (your <b>cost</b>). Never exposed to patients or TPAs. Untick <b>Offers</b> if the provider does not run this test at all.</span></div>
+          <div style="overflow:auto;max-height:55vh"><table><thead><tr><th>Masking ID</th><th>Name</th><th>List</th><th>Centre price (cost)</th><th>Margin @ list</th><th>Offers</th></tr></thead><tbody id="pc-tbl"></tbody></table></div>
+          <div id="pc-savebar" style="display:none;position:sticky;bottom:0;margin-top:10px;padding:11px 14px;background:var(--navy);color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <span id="pc-dirty" style="font-size:13px;font-weight:700"></span>
+            <span><button class="btn" onclick="pcReset()">Discard</button> <button class="btn primary" onclick="saveProvCost()">Save changes</button></span>
+          </div>
         </div>
       </div>
 
       <div class="subpane" id="pt-ent">
         <div class="card">
-          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-            <select id="ep-ent" onchange="renderEntPrice()" style="min-width:230px"></select>
-            <input id="ep-q" placeholder="Filter masking ID…" oninput="renderEntPrice()" style="flex:1;min-width:170px">
-            <button class="btn" onclick="baselineAll()">Reset all to baseline</button>
-            <button class="btn primary" onclick="saveEntPrice()">Save pricing</button>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+            <select id="ep-ent" onchange="epSwitch()" style="min-width:210px"></select>
+            <select id="ep-filter" onchange="renderEntPrice()" style="min-width:170px">
+              <option value="all">All items</option>
+              <option value="closed">Closed individually</option>
+              <option value="below">Below cost</option>
+            </select>
+            <input id="ep-q" placeholder="Filter…" oninput="renderEntPrice()" style="flex:1;min-width:140px">
           </div>
-          <div class="alert alert-a" style="margin-bottom:10px"><span><b>Baseline</b> = agreement price. If the TPA's price doesn't match, set an <b>agreed price</b> — the row switches to <b>closed individual</b> and only that package routes at that rate.</span></div>
-          <div id="ep-summary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"></div>
-          <div style="overflow:auto;max-height:60vh"><table><thead><tr><th>Masking ID</th><th>Name</th><th>List</th><th>Best cost</th><th>Agreed price</th><th>Mode</th><th>Margin</th><th>Status</th></tr></thead><tbody id="ep-tbl"></tbody></table></div>
+          <div id="ep-summary" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>
+          <div class="alert alert-a" style="margin-bottom:10px"><span>Blank = <b>baseline</b> (agreement rate). Enter a price to <b>close that package individually</b> — only that masking ID routes at the negotiated rate. Price history is retained.</span></div>
+          <div style="overflow:auto;max-height:55vh"><table><thead><tr><th>Masking ID</th><th>Name</th><th>List</th><th>Best cost</th><th>Agreed price</th><th>Mode</th><th>Margin</th><th>Status</th></tr></thead><tbody id="ep-tbl"></tbody></table></div>
+          <div id="ep-savebar" style="display:none;position:sticky;bottom:0;margin-top:10px;padding:11px 14px;background:var(--navy);color:#fff;border-radius:10px;align-items:center;justify-content:space-between;gap:12px">
+            <span id="ep-dirty" style="font-size:13px;font-weight:700"></span>
+            <span><button class="btn" onclick="epReset()">Discard</button> <button class="btn primary" onclick="saveEntPrice()">Save changes</button></span>
+          </div>
         </div>
+      </div>
+    </div>
+
+    <!-- NEW TEST MODAL -->
+    <div class="ov" id="nt-modal" onclick="if(event.target===this)closeMod('nt-modal')">
+      <div class="modal">
+        <div class="mhead"><div><div class="mtitle">Add a new test</div><div style="font-size:12px;color:var(--hint);margin-top:3px">A masking ID is generated automatically</div></div><button class="mclose" onclick="closeMod('nt-modal')">&#10005;</button></div>
+        <div class="mbody">
+          <div class="fgrp"><label>Category <span class="req">*</span></label>
+            <select id="nt-cat" onchange="ntPreview()">
+              <option value="add_on_pathology">Add-on pathology</option>
+              <option value="radiology">Radiology</option>
+              <option value="radiology_combo">Radiology combo</option>
+              <option value="baseline_package">Baseline package</option>
+            </select></div>
+          <div class="fgrp"><label>Masking ID</label><input id="nt-code" readonly style="background:var(--s2);font-family:ui-monospace,monospace;font-weight:700"></div>
+          <div class="fgrp"><label>Test name <span class="req">*</span></label><input id="nt-name" placeholder="e.g. Vitamin K"></div>
+          <div class="fgrp"><label>List price (₹) <span class="req">*</span></label><input id="nt-price" type="number" placeholder="200"></div>
+          <div style="font-size:12px;color:var(--hint)">Once created it appears as an unpriced gap for every provider and on baseline for every enterprise — nothing is silently missed.</div>
+        </div>
+        <div class="mfoot"><button class="btn" onclick="closeMod('nt-modal')">Cancel</button><button class="btn primary" onclick="createTest()">Create test</button></div>
+      </div>
+    </div>
+
+    <!-- CLONE MODAL -->
+    <div class="ov" id="cl-modal" onclick="if(event.target===this)closeMod('cl-modal')">
+      <div class="modal">
+        <div class="mhead"><div><div class="mtitle">Clone cost card</div><div style="font-size:12px;color:var(--hint);margin-top:3px">Copy another provider's prices as a starting point</div></div><button class="mclose" onclick="closeMod('cl-modal')">&#10005;</button></div>
+        <div class="mbody">
+          <div class="fgrp"><label>Copy prices from</label><select id="cl-from"></select></div>
+          <div class="fgrp"><label>Adjust by %</label><input id="cl-adj" type="number" value="0" placeholder="e.g. 5 = 5% higher"></div>
+          <div style="font-size:12px;color:var(--hint)">Loads into the grid as unsaved changes — review before saving.</div>
+        </div>
+        <div class="mfoot"><button class="btn" onclick="closeMod('cl-modal')">Cancel</button><button class="btn primary" onclick="doClone()">Load prices</button></div>
+      </div>
+    </div>
+
+    <!-- CSV MODAL -->
+    <div class="ov" id="csv-modal" onclick="if(event.target===this)closeMod('csv-modal')">
+      <div class="modal">
+        <div class="mhead"><div><div class="mtitle">Import cost card</div><div style="font-size:12px;color:var(--hint);margin-top:3px">Paste from the provider's rate sheet</div></div><button class="mclose" onclick="closeMod('csv-modal')">&#10005;</button></div>
+        <div class="mbody">
+          <div class="fgrp"><label>One per line: <code>MASKING_ID,PRICE</code></label>
+            <textarea id="csv-in" rows="9" placeholder="CKPK001,245&#10;CKPTA02,60&#10;CKRD06,420" style="width:100%;font-family:ui-monospace,monospace;font-size:12.5px"></textarea></div>
+          <div id="csv-msg" style="font-size:12px;color:var(--hint)"></div>
+        </div>
+        <div class="mfoot"><button class="btn" onclick="closeMod('csv-modal')">Cancel</button><button class="btn primary" onclick="doCsv()">Load into grid</button></div>
       </div>
     </div>
 
@@ -2478,41 +2545,42 @@ async function mfaVerify(){
 
 
 // ═══════════════ PHASE 3 — CATALOG · PRICING · FACILITIES ═══════════════
-var CATALOG=[], PCP=[], ECP=[], FACT=[], PFAC=[], FEXC=[], PKGCOMP=[], _p3=false;
+var CATALOG=[], PCP=[], ECP=[], FACT=[], PFAC=[], FEXC=[], PKGCOMP=[], COVER=[], QUEUE=[], _p3=false;
+var PC_DIRTY={}, EP_DIRTY={};
 var CAT_LABEL={baseline_package:'Baseline',add_on_pathology:'Add-on',radiology:'Radiology',radiology_combo:'Combo'};
 
 async function loadPhase3(force){
   if(_p3 && !force) return;
-  const [ci,pc,ec,ft,pf,fe,pk]=await Promise.all([
-    SB.from('catalog_items').select('*').order('code').limit(300),
-    SB.from('provider_catalog_pricing').select('*').limit(3000),
-    SB.from('enterprise_catalog_pricing').select('*').limit(3000),
+  const [ci,pc,ec,ft,pf,fe,pk,cv,q]=await Promise.all([
+    SB.from('catalog_items').select('*').eq('active',true).order('code').limit(2000),
+    SB.from('provider_catalog_pricing').select('*').limit(20000),
+    SB.from('enterprise_catalog_pricing').select('*').limit(20000),
     SB.from('facility_types').select('*').order('grp').limit(100),
     SB.from('provider_facilities').select('*').limit(2000),
     SB.from('facility_exceptions').select('*').order('date_from',{ascending:false}).limit(500),
-    SB.from('package_components').select('package_code').limit(500)
+    SB.from('package_components').select('package_code').limit(2000),
+    SB.from('v_provider_coverage').select('*').limit(200),
+    SB.from('v_price_match_queue').select('*').limit(500)
   ]);
-  CATALOG=ci.data||[]; PCP=pc.data||[]; ECP=ec.data||[]; FACT=ft.data||[]; PFAC=pf.data||[]; FEXC=fe.data||[]; PKGCOMP=pk.data||[];
+  CATALOG=ci.data||[]; PCP=pc.data||[]; ECP=ec.data||[]; FACT=ft.data||[]; PFAC=pf.data||[];
+  FEXC=fe.data||[]; PKGCOMP=pk.data||[]; COVER=cv.data||[]; QUEUE=q.data||[];
   _p3=true;
 }
 
 function bestCost(code){
-  var rows=PCP.filter(function(p){return p.catalog_code===code && p.active!==false && p.centre_price!=null;});
-  if(!rows.length) return null;
-  return Math.min.apply(null, rows.map(function(p){return Number(p.centre_price);}));
+  var r=PCP.filter(function(p){return p.catalog_code===code && p.active!==false && p.offered!==false && p.centre_price!=null;});
+  return r.length? Math.min.apply(null, r.map(function(p){return Number(p.centre_price);})) : null;
 }
+function provCount(code){ return PCP.filter(function(p){return p.catalog_code===code && p.centre_price!=null && p.offered!==false;}).length; }
 function compCount(code){ return PKGCOMP.filter(function(p){return p.package_code===code;}).length; }
-function pctOf(margin, sell){ return sell>0 ? Math.round(margin/sell*1000)/10 : 0; }
+function pctOf(m,s){ return s>0? Math.round(m/s*1000)/10 : 0; }
 function marginHtml(sell, cost){
-  if(cost==null) return '<span style="color:var(--hint)">no cost set</span>';
+  if(cost==null) return '<span style="color:var(--hint)">no cost</span>';
   var m=sell-cost, c=m<0?'var(--red)':'var(--teal-d)';
   return '<span style="font-weight:700;color:'+c+'">'+money(m)+'</span> <span style="font-size:11px;color:var(--hint)">'+pctOf(m,sell)+'%</span>';
 }
-function labOpts(sel){
-  return LABS.map(function(l){return '<option value="'+l.id+'"'+(sel===l.id?' selected':'')+'>'+esc(l.branch_name||l.name)+'</option>';}).join('');
-}
+function labOpts(sel){ return LABS.map(function(l){return '<option value="'+l.id+'"'+(sel===l.id?' selected':'')+'>'+esc(l.branch_name||l.name)+'</option>';}).join(''); }
 
-// ── tabs ──
 function pricingTab(t,el){
   document.querySelectorAll('#p-pricing .seg button').forEach(function(b){b.classList.toggle('on',b.dataset.pt===t);});
   document.querySelectorAll('#p-pricing .subpane').forEach(function(p){p.classList.toggle('show',p.id==='pt-'+t);});
@@ -2524,6 +2592,10 @@ async function renderPricing(){
   var pl=document.getElementById('pc-lab'); if(pl && !pl.options.length) pl.innerHTML=labOpts();
   var ee=document.getElementById('ep-ent');
   if(ee && !ee.options.length) ee.innerHTML=ENTS.map(function(e){return '<option value="'+e.id+'">'+esc(e.name)+'</option>';}).join('');
+  var b=document.getElementById('pq-banner');
+  b.innerHTML = QUEUE.length
+    ? '<div class="alert" style="background:var(--redbg);border:1px solid var(--redbord);color:#991B1B"><span><b>'+QUEUE.length+' package(s) priced below cost.</b> These need an individual close before they route. <button class="abt" onclick="pricingTab(\'ent\',null);document.getElementById(\'ep-filter\').value=\'below\';renderEntPrice()">Review queue →</button></span></div>'
+    : '<div class="alert" style="background:var(--teal-l);color:var(--teal-d)"><span>✓ No packages below cost. All routes profitable.</span></div>';
   renderCatalog();
 }
 
@@ -2533,128 +2605,223 @@ function renderCatalog(){
   var c=document.getElementById('cat-cat').value;
   var rows=CATALOG.filter(function(x){
     if(c && x.category!==c) return false;
-    if(q && (x.code+' '+x.name).toLowerCase().indexOf(q)<0) return false;
-    return true;
+    return !q || (x.code+' '+x.name).toLowerCase().indexOf(q)>=0;
   });
   document.getElementById('cat-tbl').innerHTML = rows.length? rows.map(function(x){
-    var cost=bestCost(x.code), n=compCount(x.code);
+    var cost=bestCost(x.code), n=compCount(x.code), pv=provCount(x.code);
     return '<tr><td style="font-weight:700;font-family:ui-monospace,monospace">'+esc(x.code)+'</td>'+
       '<td><span class="badge bp">'+(CAT_LABEL[x.category]||x.category)+'</span></td>'+
-      '<td>'+esc(x.name)+'</td>'+
-      '<td>'+(n? n+' panels':'<span style="color:var(--hint)">—</span>')+'</td>'+
+      '<td>'+esc(x.name)+'</td><td>'+(n? n+' panels':'<span style="color:var(--hint)">—</span>')+'</td>'+
       '<td style="font-weight:700">'+money(x.list_price)+'</td>'+
       '<td>'+(cost==null?'<span style="color:var(--hint)">—</span>':money(cost))+'</td>'+
-      '<td>'+marginHtml(Number(x.list_price||0), cost)+'</td></tr>';
-  }).join('') : '<tr><td colspan="7" class="empty">No items match</td></tr>';
+      '<td>'+marginHtml(Number(x.list_price||0),cost)+'</td>'+
+      '<td>'+(pv? '<span class="badge bg">'+pv+' priced</span>':'<span class="badge br">unpriced</span>')+'</td></tr>';
+  }).join('') : '<tr><td colspan="8" class="empty">No items match</td></tr>';
 }
 
-// ── provider cost ──
+// ── new test ──
+async function openNewTest(){
+  document.getElementById('nt-name').value=''; document.getElementById('nt-price').value='';
+  await ntPreview(); openMod('nt-modal');
+}
+async function ntPreview(){
+  var cat=document.getElementById('nt-cat').value;
+  var r=await SB.rpc('next_catalog_code',{cat:cat});
+  document.getElementById('nt-code').value = r.error? '—' : r.data;
+}
+async function createTest(){
+  var cat=document.getElementById('nt-cat').value;
+  var name=document.getElementById('nt-name').value.trim();
+  var price=Number(document.getElementById('nt-price').value);
+  if(!name) return toast('e','Test name is required');
+  if(!price||price<=0) return toast('e','Enter a list price');
+  var code=document.getElementById('nt-code').value;
+  var r=await SB.from('catalog_items').insert({code:code,category:cat,name:name,list_price:price,active:true});
+  if(r.error) return toast('e',r.error.message);
+  closeMod('nt-modal'); toast('s',code+' created — now unpriced for every provider');
+  await loadPhase3(true); renderPricing();
+}
+
+// ── provider cost (diff-only saves) ──
+function pcSwitchLab(){ if(Object.keys(PC_DIRTY).length && !confirm('Discard unsaved changes?')) return; PC_DIRTY={}; renderProvCost(); }
+function pcReset(){ PC_DIRTY={}; renderProvCost(); }
+function pcBar(){
+  var n=Object.keys(PC_DIRTY).length;
+  var bar=document.getElementById('pc-savebar');
+  bar.style.display = n? 'flex':'none';
+  document.getElementById('pc-dirty').textContent = n+' unsaved change'+(n===1?'':'s');
+}
 function renderProvCost(){
   var lab=document.getElementById('pc-lab').value;
+  var f=document.getElementById('pc-filter').value;
   var q=(document.getElementById('pc-q').value||'').toLowerCase();
-  var rows=CATALOG.filter(function(x){return !q || (x.code+' '+x.name).toLowerCase().indexOf(q)>=0;});
-  document.getElementById('pc-tbl').innerHTML = rows.map(function(x){
+  var cov=COVER.find(function(c){return c.lab_id===lab;});
+  if(cov){
+    var pctv=Math.round(cov.priced/cov.catalog_size*100);
+    document.getElementById('pc-cover').innerHTML=
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'+
+      '<span class="chip">Priced <b>'+cov.priced+'/'+cov.catalog_size+'</b></span>'+
+      '<span class="chip" style="background:'+(cov.gaps?'var(--redbg)':'var(--teal-l)')+';color:'+(cov.gaps?'var(--red)':'var(--teal-d)')+'">Gaps <b>'+cov.gaps+'</b></span>'+
+      '<span class="chip">Not offered <b>'+cov.not_offered+'</b></span>'+
+      '<div style="flex:1;min-width:120px;height:7px;background:var(--bord2);border-radius:4px;overflow:hidden"><div style="width:'+pctv+'%;height:100%;background:var(--teal)"></div></div></div>';
+  }
+  var rows=CATALOG.filter(function(x){
+    if(q && (x.code+' '+x.name).toLowerCase().indexOf(q)<0) return false;
     var r=PCP.find(function(p){return p.lab_id===lab && p.catalog_code===x.code;});
-    var cp=r&&r.centre_price!=null?r.centre_price:'';
-    var act=!r||r.active!==false;
-    return '<tr data-code="'+x.code+'">'+
-      '<td style="font-weight:700;font-family:ui-monospace,monospace">'+esc(x.code)+'</td>'+
-      '<td>'+esc(x.name)+'</td>'+
-      '<td style="color:var(--hint)">'+money(x.list_price)+'</td>'+
-      '<td><input class="pc-in" type="number" value="'+cp+'" data-code="'+x.code+'" oninput="pcRecalc(this)" style="width:110px"></td>'+
-      '<td class="pc-m">'+marginHtml(Number(x.list_price||0), cp===''?null:Number(cp))+'</td>'+
-      '<td><input type="checkbox" class="pc-a" data-code="'+x.code+'" '+(act?'checked':'')+'></td></tr>';
-  }).join('');
-}
-function pcRecalc(inp){
-  var code=inp.dataset.code, item=CATALOG.find(function(x){return x.code===code;});
-  var v=inp.value===''?null:Number(inp.value);
-  inp.closest('tr').querySelector('.pc-m').innerHTML=marginHtml(Number(item.list_price||0), v);
-}
-function bulkCost(){
-  var pct=Number(document.getElementById('pc-bulk').value);
-  if(!pct||pct<=0) return toast('e','Enter a % of list price (e.g. 70)');
-  document.querySelectorAll('#pc-tbl .pc-in').forEach(function(inp){
-    if(inp.value!=='') return;
-    var item=CATALOG.find(function(x){return x.code===inp.dataset.code;});
-    inp.value=Math.round(Number(item.list_price||0)*pct/100);
-    pcRecalc(inp);
+    var d=PC_DIRTY[x.code];
+    var priced = d? d.centre_price!=null : (r && r.centre_price!=null);
+    var offered = d? d.offered : (r? r.offered!==false : true);
+    if(f==='gaps')   return !priced && offered;
+    if(f==='priced') return priced;
+    if(f==='off')    return !offered;
+    return true;
   });
-  toast('s','Applied '+pct+'% of list to blank rows — review, then Save');
+  document.getElementById('pc-tbl').innerHTML = rows.length? rows.map(function(x){
+    var r=PCP.find(function(p){return p.lab_id===lab && p.catalog_code===x.code;});
+    var d=PC_DIRTY[x.code];
+    var cp = d? (d.centre_price==null?'':d.centre_price) : (r&&r.centre_price!=null? r.centre_price : '');
+    var off = d? d.offered : (r? r.offered!==false : true);
+    return '<tr'+(d?' style="background:#FFFBEB"':'')+'>'+
+      '<td style="font-weight:700;font-family:ui-monospace,monospace">'+esc(x.code)+'</td>'+
+      '<td>'+esc(x.name)+'</td><td style="color:var(--hint)">'+money(x.list_price)+'</td>'+
+      '<td><input class="pc-in" type="number" value="'+cp+'" data-code="'+x.code+'" oninput="pcEdit(this)" style="width:110px"'+(off?'':' disabled')+'></td>'+
+      '<td class="pc-m">'+marginHtml(Number(x.list_price||0), cp===''?null:Number(cp))+'</td>'+
+      '<td><input type="checkbox" class="pc-a" data-code="'+x.code+'" '+(off?'checked':'')+' onchange="pcOffer(this)"></td></tr>';
+  }).join('') : '<tr><td colspan="6" class="empty">Nothing here — try a different filter</td></tr>';
+  pcBar();
+}
+function _pcState(code){
+  var lab=document.getElementById('pc-lab').value;
+  var r=PCP.find(function(p){return p.lab_id===lab && p.catalog_code===code;});
+  return PC_DIRTY[code] || {centre_price: r&&r.centre_price!=null? Number(r.centre_price):null, offered: r? r.offered!==false : true};
+}
+function pcEdit(inp){
+  var code=inp.dataset.code, st=_pcState(code);
+  st.centre_price = inp.value===''? null : Number(inp.value);
+  PC_DIRTY[code]=st;
+  var item=CATALOG.find(function(x){return x.code===code;});
+  inp.closest('tr').querySelector('.pc-m').innerHTML=marginHtml(Number(item.list_price||0), st.centre_price);
+  inp.closest('tr').style.background='#FFFBEB';
+  pcBar();
+}
+function pcOffer(cb){
+  var code=cb.dataset.code, st=_pcState(code);
+  st.offered=cb.checked; PC_DIRTY[code]=st;
+  var inp=document.querySelector('#pc-tbl .pc-in[data-code="'+code+'"]');
+  if(inp) inp.disabled=!cb.checked;
+  cb.closest('tr').style.background='#FFFBEB';
+  pcBar();
 }
 async function saveProvCost(){
   var lab=document.getElementById('pc-lab').value;
-  if(!lab) return toast('e','Pick a provider');
-  var recs=[];
-  document.querySelectorAll('#pc-tbl .pc-in').forEach(function(inp){
-    if(inp.value==='') return;
-    var code=inp.dataset.code;
-    var act=document.querySelector('#pc-tbl .pc-a[data-code="'+code+'"]').checked;
-    recs.push({lab_id:lab, catalog_code:code, centre_price:Number(inp.value), active:act});
-  });
-  if(!recs.length) return toast('w','Nothing to save');
+  var codes=Object.keys(PC_DIRTY);
+  if(!codes.length) return toast('w','No changes');
+  var recs=codes.map(function(c){ var d=PC_DIRTY[c]; return {lab_id:lab, catalog_code:c, centre_price:d.centre_price, offered:d.offered, active:true}; });
   var r=await SB.from('provider_catalog_pricing').upsert(recs,{onConflict:'lab_id,catalog_code'});
   if(r.error) return toast('e',r.error.message);
-  toast('s','Saved '+recs.length+' cost lines');
-  await loadPhase3(true); renderProvCost();
+  toast('s','Saved '+recs.length+' change'+(recs.length===1?'':'s')+' · history recorded');
+  PC_DIRTY={}; await loadPhase3(true); renderProvCost();
+}
+function openClone(){
+  var cur=document.getElementById('pc-lab').value;
+  document.getElementById('cl-from').innerHTML=LABS.filter(function(l){return l.id!==cur;}).map(function(l){return '<option value="'+l.id+'">'+esc(l.branch_name||l.name)+'</option>';}).join('');
+  openMod('cl-modal');
+}
+function doClone(){
+  var from=document.getElementById('cl-from').value;
+  var adj=Number(document.getElementById('cl-adj').value)||0;
+  var src=PCP.filter(function(p){return p.lab_id===from && p.centre_price!=null;});
+  if(!src.length){ closeMod('cl-modal'); return toast('w','That provider has no prices yet'); }
+  src.forEach(function(p){
+    PC_DIRTY[p.catalog_code]={centre_price:Math.round(Number(p.centre_price)*(1+adj/100)), offered:p.offered!==false};
+  });
+  closeMod('cl-modal'); toast('s','Loaded '+src.length+' prices — review, then Save');
+  document.getElementById('pc-filter').value='all'; renderProvCost();
+}
+function openCsv(){ document.getElementById('csv-in').value=''; document.getElementById('csv-msg').textContent=''; openMod('csv-modal'); }
+function doCsv(){
+  var lines=document.getElementById('csv-in').value.split(/\n/).map(function(l){return l.trim();}).filter(Boolean);
+  var ok=0, bad=[];
+  lines.forEach(function(l){
+    var p=l.split(/[,\t;]/);
+    var code=(p[0]||'').trim().toUpperCase(), val=Number((p[1]||'').trim());
+    if(!code || !CATALOG.some(function(x){return x.code===code;}) || !val || val<=0){ bad.push(l); return; }
+    PC_DIRTY[code]={centre_price:val, offered:true}; ok++;
+  });
+  if(!ok){ document.getElementById('csv-msg').innerHTML='<span style="color:var(--red)">No valid rows. Check masking IDs.</span>'; return; }
+  closeMod('csv-modal');
+  toast('s',ok+' prices loaded'+(bad.length?' · '+bad.length+' skipped':'')+' — review, then Save');
+  document.getElementById('pc-filter').value='all'; renderProvCost();
 }
 
-// ── enterprise pricing + margin ──
+// ── enterprise pricing (non-destructive: baseline keeps the row + history) ──
+function epSwitch(){ if(Object.keys(EP_DIRTY).length && !confirm('Discard unsaved changes?')) return; EP_DIRTY={}; renderEntPrice(); }
+function epReset(){ EP_DIRTY={}; renderEntPrice(); }
+function epBar(){
+  var n=Object.keys(EP_DIRTY).length;
+  document.getElementById('ep-savebar').style.display = n? 'flex':'none';
+  document.getElementById('ep-dirty').textContent = n+' unsaved change'+(n===1?'':'s');
+}
 function renderEntPrice(){
   var ent=document.getElementById('ep-ent').value;
+  var f=document.getElementById('ep-filter').value;
   var q=(document.getElementById('ep-q').value||'').toLowerCase();
-  var rows=CATALOG.filter(function(x){return !q || (x.code+' '+x.name).toLowerCase().indexOf(q)>=0;});
   var closed=0, below=0, totM=0, n=0;
-  var html=rows.map(function(x){
+  var all=CATALOG.map(function(x){
     var r=ECP.find(function(p){return p.enterprise_id===ent && p.catalog_code===x.code;});
+    var d=EP_DIRTY[x.code];
+    var agreed = d? d.agreed_price : (r&&r.agreed_price!=null? Number(r.agreed_price):null);
     var list=Number(x.list_price||0);
-    var agreed=r&&r.agreed_price!=null?Number(r.agreed_price):null;
-    var sell=agreed==null?list:agreed;
-    var mode=(r&&r.mode)||'baseline';
+    var sell = agreed==null? list : agreed;
+    var cost = bestCost(x.code);
     if(agreed!=null) closed++;
-    var cost=bestCost(x.code);
-    var status;
-    if(cost==null) status='<span class="badge bgr">no cost</span>';
-    else if(sell<cost){ below++; status='<span class="badge br">below cost — close individual</span>'; }
-    else status='<span class="badge bg">routes on '+(mode==='closed_individual'?'closed rate':'baseline')+'</span>';
+    if(cost!=null && sell<cost) below++;
     if(cost!=null){ totM+=(sell-cost); n++; }
-    return '<tr>'+
-      '<td style="font-weight:700;font-family:ui-monospace,monospace">'+esc(x.code)+'</td>'+
-      '<td>'+esc(x.name)+'</td>'+
-      '<td style="color:var(--hint)">'+money(list)+'</td>'+
-      '<td>'+(cost==null?'—':money(cost))+'</td>'+
-      '<td><input class="ep-in" type="number" placeholder="'+list+'" value="'+(agreed==null?'':agreed)+'" data-code="'+x.code+'" oninput="renderEntSummaryDebounced()" style="width:110px"></td>'+
-      '<td>'+(agreed==null?'<span class="badge bgr">baseline</span>':'<span class="badge bp">closed individual</span>')+'</td>'+
-      '<td>'+marginHtml(sell, cost)+'</td>'+
-      '<td>'+status+'</td></tr>';
-  }).join('');
-  document.getElementById('ep-tbl').innerHTML = html || '<tr><td colspan="8" class="empty">No items</td></tr>';
+    return {x:x,agreed:agreed,list:list,sell:sell,cost:cost,dirty:!!d};
+  });
+  var rows=all.filter(function(o){
+    if(q && (o.x.code+' '+o.x.name).toLowerCase().indexOf(q)<0) return false;
+    if(f==='closed') return o.agreed!=null;
+    if(f==='below')  return o.cost!=null && o.sell<o.cost;
+    return true;
+  });
+  document.getElementById('ep-tbl').innerHTML = rows.length? rows.map(function(o){
+    var status;
+    if(o.cost==null) status='<span class="badge bgr">no cost</span>';
+    else if(o.sell<o.cost) status='<span class="badge br">below cost — close individually</span>';
+    else status='<span class="badge bg">routes on '+(o.agreed==null?'baseline':'closed rate')+'</span>';
+    return '<tr'+(o.dirty?' style="background:#FFFBEB"':'')+'>'+
+      '<td style="font-weight:700;font-family:ui-monospace,monospace">'+esc(o.x.code)+'</td>'+
+      '<td>'+esc(o.x.name)+'</td><td style="color:var(--hint)">'+money(o.list)+'</td>'+
+      '<td>'+(o.cost==null?'—':money(o.cost))+'</td>'+
+      '<td><input class="ep-in" type="number" placeholder="'+o.list+'" value="'+(o.agreed==null?'':o.agreed)+'" data-code="'+o.x.code+'" oninput="epEdit(this)" style="width:110px"></td>'+
+      '<td>'+(o.agreed==null?'<span class="badge bgr">baseline</span>':'<span class="badge bp">closed individual</span>')+'</td>'+
+      '<td>'+marginHtml(o.sell,o.cost)+'</td><td>'+status+'</td></tr>';
+  }).join('') : '<tr><td colspan="8" class="empty">Nothing here — try a different filter</td></tr>';
   document.getElementById('ep-summary').innerHTML =
-    '<span class="chip">Closed individually: <b>'+closed+'</b></span>'+
-    '<span class="chip" style="background:'+(below?'var(--redbg)':'var(--teal-l)')+';color:'+(below?'var(--red)':'var(--teal-d)')+'">Below cost: <b>'+below+'</b></span>'+
-    '<span class="chip">Avg margin: <b>'+(n?money(Math.round(totM/n)):'—')+'</b></span>';
+    '<span class="chip">Closed individually <b>'+closed+'</b></span>'+
+    '<span class="chip" style="background:'+(below?'var(--redbg)':'var(--teal-l)')+';color:'+(below?'var(--red)':'var(--teal-d)')+'">Below cost <b>'+below+'</b></span>'+
+    '<span class="chip">Avg margin <b>'+(n?money(Math.round(totM/n)):'—')+'</b></span>';
+  epBar();
 }
-var _epT; function renderEntSummaryDebounced(){ clearTimeout(_epT); _epT=setTimeout(renderEntPrice,500); }
-function baselineAll(){
-  document.querySelectorAll('#ep-tbl .ep-in').forEach(function(i){i.value='';});
-  renderEntPrice(); toast('s','All rows reset to baseline — Save to apply');
+function epEdit(inp){
+  var code=inp.dataset.code;
+  EP_DIRTY[code]={agreed_price: inp.value===''? null : Number(inp.value)};
+  inp.closest('tr').style.background='#FFFBEB';
+  epBar();
 }
 async function saveEntPrice(){
   var ent=document.getElementById('ep-ent').value;
-  if(!ent) return toast('e','Pick an enterprise');
-  var recs=[], del=[];
-  document.querySelectorAll('#ep-tbl .ep-in').forEach(function(inp){
-    var code=inp.dataset.code;
-    if(inp.value===''){ del.push(code); return; }
-    recs.push({enterprise_id:ent, catalog_code:code, agreed_price:Number(inp.value), mode:'closed_individual', status:'active'});
+  var codes=Object.keys(EP_DIRTY);
+  if(!codes.length) return toast('w','No changes');
+  var recs=codes.map(function(c){
+    var a=EP_DIRTY[c].agreed_price;
+    return {enterprise_id:ent, catalog_code:c, agreed_price:a, mode:(a==null?'baseline':'closed_individual'), status:'active'};
   });
-  if(recs.length){
-    var r=await SB.from('enterprise_catalog_pricing').upsert(recs,{onConflict:'enterprise_id,catalog_code'});
-    if(r.error) return toast('e',r.error.message);
-  }
-  if(del.length){ await SB.from('enterprise_catalog_pricing').delete().eq('enterprise_id',ent).in('catalog_code',del); }
-  toast('s',recs.length+' closed-individual rates saved · '+del.length+' on baseline');
-  await loadPhase3(true); renderEntPrice();
+  var r=await SB.from('enterprise_catalog_pricing').upsert(recs,{onConflict:'enterprise_id,catalog_code'});
+  if(r.error) return toast('e',r.error.message);
+  toast('s','Saved '+recs.length+' change'+(recs.length===1?'':'s')+' · history retained');
+  EP_DIRTY={}; await loadPhase3(true); renderEntPrice();
 }
 
 // ── facilities ──
