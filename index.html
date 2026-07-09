@@ -300,6 +300,12 @@ tbody tr:hover td{background:#FAFBFC}
     <div class="sb-item" data-pg="partner" onclick="nav('partner',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Partner Setup
     </div>
+    <div class="sb-item" data-pg="pricing" onclick="nav('pricing',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Catalog &amp; Pricing
+    </div>
+    <div class="sb-item" data-pg="facilities" onclick="nav('facilities',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/></svg>Facilities
+    </div>
     <div class="sb-sect">Business</div>
     <div class="sb-item" data-pg="finance" onclick="nav('finance',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Finance
@@ -626,6 +632,107 @@ tbody tr:hover td{background:#FAFBFC}
     </div>
 
     <!-- PHASE 2 STUBS -->
+    <!-- ══════════ CATALOG & PRICING ══════════ -->
+    <div class="page" id="p-pricing">
+      <div class="phead"><div><div class="ptitle">Catalog &amp; Pricing</div><div class="psub">Masking IDs · provider cost · enterprise pricing &amp; margin</div></div>
+        <div style="display:flex;gap:8px"><button class="btn" onclick="loadPhase3(true)">↻ Refresh</button></div></div>
+      <div class="seg" style="margin-bottom:14px">
+        <button class="on" data-pt="catalog" onclick="pricingTab('catalog',this)">Catalog (93)</button>
+        <button data-pt="cost" onclick="pricingTab('cost',this)">Provider Cost</button>
+        <button data-pt="ent" onclick="pricingTab('ent',this)">Enterprise Pricing &amp; Margin</button>
+      </div>
+
+      <div class="subpane show" id="pt-catalog">
+        <div class="card">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+            <input id="cat-q" placeholder="Search code or name…" oninput="renderCatalog()" style="flex:1;min-width:200px">
+            <select id="cat-cat" onchange="renderCatalog()" style="min-width:190px">
+              <option value="">All categories</option>
+              <option value="baseline_package">Baseline packages</option>
+              <option value="add_on_pathology">Add-on pathology</option>
+              <option value="radiology">Radiology</option>
+              <option value="radiology_combo">Radiology combos</option>
+            </select>
+          </div>
+          <div style="overflow:auto"><table><thead><tr><th>Masking ID</th><th>Category</th><th>Name</th><th>Contents</th><th>List price</th><th>Best cost</th><th>Margin @ list</th></tr></thead><tbody id="cat-tbl"></tbody></table></div>
+        </div>
+      </div>
+
+      <div class="subpane" id="pt-cost">
+        <div class="card">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+            <select id="pc-lab" onchange="renderProvCost()" style="min-width:230px"></select>
+            <input id="pc-q" placeholder="Filter masking ID…" oninput="renderProvCost()" style="flex:1;min-width:170px">
+            <input id="pc-bulk" type="number" placeholder="% of list" style="width:110px">
+            <button class="btn" onclick="bulkCost()">Apply % to blanks</button>
+            <button class="btn primary" onclick="saveProvCost()">Save cost card</button>
+          </div>
+          <div class="alert alert-a" style="margin-bottom:10px"><span>Centre price = what this provider charges Checkupify (your <b>cost</b>). Never shown to patients or TPAs.</span></div>
+          <div style="overflow:auto;max-height:60vh"><table><thead><tr><th>Masking ID</th><th>Name</th><th>List price</th><th>Centre price (cost)</th><th>Margin @ list</th><th>Active</th></tr></thead><tbody id="pc-tbl"></tbody></table></div>
+        </div>
+      </div>
+
+      <div class="subpane" id="pt-ent">
+        <div class="card">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+            <select id="ep-ent" onchange="renderEntPrice()" style="min-width:230px"></select>
+            <input id="ep-q" placeholder="Filter masking ID…" oninput="renderEntPrice()" style="flex:1;min-width:170px">
+            <button class="btn" onclick="baselineAll()">Reset all to baseline</button>
+            <button class="btn primary" onclick="saveEntPrice()">Save pricing</button>
+          </div>
+          <div class="alert alert-a" style="margin-bottom:10px"><span><b>Baseline</b> = agreement price. If the TPA's price doesn't match, set an <b>agreed price</b> — the row switches to <b>closed individual</b> and only that package routes at that rate.</span></div>
+          <div id="ep-summary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"></div>
+          <div style="overflow:auto;max-height:60vh"><table><thead><tr><th>Masking ID</th><th>Name</th><th>List</th><th>Best cost</th><th>Agreed price</th><th>Mode</th><th>Margin</th><th>Status</th></tr></thead><tbody id="ep-tbl"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ FACILITIES ══════════ -->
+    <div class="page" id="p-facilities">
+      <div class="phead"><div><div class="ptitle">Facility Management</div><div class="psub">Enable / disable facilities · date &amp; slot downtime · bulk actions</div></div>
+        <div style="display:flex;gap:8px"><button class="btn" onclick="loadPhase3(true)">↻ Refresh</button><button class="btn primary" onclick="openDowntime()">+ Add downtime</button></div></div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+          <select id="fc-lab" onchange="renderFacilities()" style="min-width:230px"></select>
+          <button class="btn" onclick="bulkFac(true)">Enable selected</button>
+          <button class="btn" onclick="bulkFac(false)">Disable selected</button>
+          <button class="btn primary" onclick="saveFacilities()">Save changes</button>
+        </div>
+        <div class="alert alert-a" style="margin-bottom:10px"><span>Disabled facilities are removed from booking routing immediately. Providers can also self-manage this in their dashboard.</span></div>
+        <div style="overflow:auto"><table><thead><tr><th style="width:34px"><input type="checkbox" id="fc-all" onchange="facAll(this.checked)"></th><th>Facility</th><th>Group</th><th>Status</th><th>Active downtime</th></tr></thead><tbody id="fc-tbl"></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <div style="font-size:15px;font-weight:800;margin-bottom:10px">Scheduled downtime</div>
+        <div style="overflow:auto"><table><thead><tr><th>Provider</th><th>Facility</th><th>From</th><th>To</th><th>Slot</th><th>Reason</th><th></th></tr></thead><tbody id="fx-tbl"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- DOWNTIME MODAL -->
+    <div class="ov" id="dt-modal" onclick="if(event.target===this)closeMod('dt-modal')">
+      <div class="modal">
+        <div class="mhead"><div><div class="mtitle">Add downtime</div><div style="font-size:12px;color:var(--hint);margin-top:3px">Machine failure, doctor unavailable, maintenance…</div></div><button class="mclose" onclick="closeMod('dt-modal')">&#10005;</button></div>
+        <div class="mbody">
+          <div class="frow f2">
+            <div class="fgrp"><label>Provider <span class="req">*</span></label><select id="dt-lab"></select></div>
+            <div class="fgrp"><label>Facility <span class="req">*</span></label><select id="dt-fac"></select></div>
+          </div>
+          <div class="frow f2">
+            <div class="fgrp"><label>From date <span class="req">*</span></label><input id="dt-from" type="date"></div>
+            <div class="fgrp"><label>To date <span class="req">*</span></label><input id="dt-to" type="date"></div>
+          </div>
+          <div class="frow f2">
+            <div class="fgrp"><label>Slot from (optional)</label><input id="dt-sf" type="time"></div>
+            <div class="fgrp"><label>Slot to (optional)</label><input id="dt-st" type="time"></div>
+          </div>
+          <div class="fgrp"><label>Reason</label><select id="dt-reason"><option value="doctor_unavailable">Doctor unavailable</option><option value="machine_failure">Machine failure</option><option value="maintenance">Maintenance</option><option value="other">Other</option></select></div>
+          <div style="font-size:12px;color:var(--hint)">Leave slot blank to block the whole day(s).</div>
+        </div>
+        <div class="mfoot"><button class="btn" onclick="closeMod('dt-modal')">Cancel</button><button class="btn primary" onclick="saveDowntime()">Add downtime</button></div>
+      </div>
+    </div>
+
     <div class="page" id="p-marketing"><div class="phead"><div><div class="ptitle">Marketing</div><div class="psub">Campaigns for the patient app & corporate HR portals</div></div></div>
       <div class="card"><div class="soon-wrap"><span class="soon-badge">PHASE 2</span><div style="font-size:16px;font-weight:700">Campaign Builder</div><div style="max-width:440px;color:var(--muted);font-size:13px">Email / SMS / WhatsApp / push campaigns with audience segmentation and health-risk targeting. Scaffolded next once daily ops are stable — not faked here.</div></div></div></div>
     <div class="page" id="p-analytics"><div class="phead"><div><div class="ptitle">Analytics</div><div class="psub">Executive, operations, network & finance drill-downs</div></div></div>
@@ -970,12 +1077,12 @@ const STAGE_LBL={prospect:'Prospect',docs:'Docs Collection',rates:'Rate Card',te
 const DOC_TYPES=[['mou','MOU (signed)'],['pan','PAN Card'],['gst','GST Certificate'],['cancelled_cheque','Cancelled Cheque']];
 let ROLE=null,ROLE_NAME='Staff';
 const ROLE_MODULES={
-  ADMIN:['dashboard','appointments','digitization','customers','leads','system','partner','finance','marketing','analytics','admin'],
-  OPS:['dashboard','appointments','digitization','customers','leads'],
+  ADMIN:['dashboard','appointments','digitization','customers','leads','system','partner','pricing','facilities','finance','marketing','analytics','admin'],
+  OPS:['dashboard','appointments','digitization','customers','leads','facilities'],
   SYSTEM_SETUP:['dashboard','system','customers'],
-  PARTNER_SETUP:['dashboard','partner'],
-  SUPPLY:['dashboard','partner','system','customers'],
-  FINANCE:['dashboard','finance'],
+  PARTNER_SETUP:['dashboard','partner','pricing','facilities'],
+  SUPPLY:['dashboard','partner','system','customers','pricing','facilities'],
+  FINANCE:['dashboard','finance','pricing'],
   PROVIDER:['dashboard','digitization']
 };
 function allowedModules(){return ROLE_MODULES[ROLE]||ROLE_MODULES.OPS}
@@ -2156,7 +2263,7 @@ async function renderAdmin(){
 }
 
 // ════════ NAV ════════
-const TITLES={dashboard:'Dashboard',appointments:'Appointments',digitization:'Digitization',customers:'Customers',leads:'Leads',system:'System Setup',partner:'Partner Setup',finance:'Finance',marketing:'Marketing',analytics:'Analytics',admin:'Administration'};
+const TITLES={dashboard:'Dashboard',appointments:'Appointments',digitization:'Digitization',customers:'Customers',leads:'Leads',system:'System Setup',partner:'Partner Setup',finance:'Finance',marketing:'Marketing',analytics:'Analytics',admin:'Administration',pricing:'Catalog & Pricing',facilities:'Facility Management'};
 function nav(name,el){
   if(ROLE && !allowedModules().includes(name)){toast('w','Your role ('+ROLE_NAME+') does not have access to '+(TITLES[name]||name));return}
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('show'));
@@ -2164,7 +2271,7 @@ function nav(name,el){
   document.getElementById('bc').textContent=TITLES[name]||name;
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.toggle('active',i.dataset.pg===name));
   if(el===undefined){const it=document.querySelector(`.sb-item[data-pg="${name}"]`);if(it){document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));it.classList.add('active')}}
-  ({dashboard:renderDashboard,appointments:()=>renderAppointments(curAptFilter),digitization:renderDigitization,customers:renderCustomers,leads:renderLeads,system:renderSystem,partner:renderPartner,finance:renderFinance,admin:renderAdmin}[name]||(()=>{}))();
+  ({dashboard:renderDashboard,appointments:()=>renderAppointments(curAptFilter),digitization:renderDigitization,customers:renderCustomers,leads:renderLeads,system:renderSystem,partner:renderPartner,finance:renderFinance,admin:renderAdmin,pricing:renderPricing,facilities:renderFacilities}[name]||(()=>{}))();
 }
 function globalSearch(q){
   q=q.trim().toLowerCase();if(!q){renderAppointments(curAptFilter);return}
@@ -2367,6 +2474,271 @@ async function mfaVerify(){
   ACTOR=_mfaEmail; await setUser(_mfaEmail);
   document.getElementById('login-gate').style.display='none';
   boot();
+}
+
+
+// ═══════════════ PHASE 3 — CATALOG · PRICING · FACILITIES ═══════════════
+var CATALOG=[], PCP=[], ECP=[], FACT=[], PFAC=[], FEXC=[], PKGCOMP=[], _p3=false;
+var CAT_LABEL={baseline_package:'Baseline',add_on_pathology:'Add-on',radiology:'Radiology',radiology_combo:'Combo'};
+
+async function loadPhase3(force){
+  if(_p3 && !force) return;
+  const [ci,pc,ec,ft,pf,fe,pk]=await Promise.all([
+    SB.from('catalog_items').select('*').order('code').limit(300),
+    SB.from('provider_catalog_pricing').select('*').limit(3000),
+    SB.from('enterprise_catalog_pricing').select('*').limit(3000),
+    SB.from('facility_types').select('*').order('grp').limit(100),
+    SB.from('provider_facilities').select('*').limit(2000),
+    SB.from('facility_exceptions').select('*').order('date_from',{ascending:false}).limit(500),
+    SB.from('package_components').select('package_code').limit(500)
+  ]);
+  CATALOG=ci.data||[]; PCP=pc.data||[]; ECP=ec.data||[]; FACT=ft.data||[]; PFAC=pf.data||[]; FEXC=fe.data||[]; PKGCOMP=pk.data||[];
+  _p3=true;
+}
+
+function bestCost(code){
+  var rows=PCP.filter(function(p){return p.catalog_code===code && p.active!==false && p.centre_price!=null;});
+  if(!rows.length) return null;
+  return Math.min.apply(null, rows.map(function(p){return Number(p.centre_price);}));
+}
+function compCount(code){ return PKGCOMP.filter(function(p){return p.package_code===code;}).length; }
+function pctOf(margin, sell){ return sell>0 ? Math.round(margin/sell*1000)/10 : 0; }
+function marginHtml(sell, cost){
+  if(cost==null) return '<span style="color:var(--hint)">no cost set</span>';
+  var m=sell-cost, c=m<0?'var(--red)':'var(--teal-d)';
+  return '<span style="font-weight:700;color:'+c+'">'+money(m)+'</span> <span style="font-size:11px;color:var(--hint)">'+pctOf(m,sell)+'%</span>';
+}
+function labOpts(sel){
+  return LABS.map(function(l){return '<option value="'+l.id+'"'+(sel===l.id?' selected':'')+'>'+esc(l.branch_name||l.name)+'</option>';}).join('');
+}
+
+// ── tabs ──
+function pricingTab(t,el){
+  document.querySelectorAll('#p-pricing .seg button').forEach(function(b){b.classList.toggle('on',b.dataset.pt===t);});
+  document.querySelectorAll('#p-pricing .subpane').forEach(function(p){p.classList.toggle('show',p.id==='pt-'+t);});
+  if(t==='catalog')renderCatalog(); else if(t==='cost')renderProvCost(); else renderEntPrice();
+}
+
+async function renderPricing(){
+  await loadPhase3();
+  var pl=document.getElementById('pc-lab'); if(pl && !pl.options.length) pl.innerHTML=labOpts();
+  var ee=document.getElementById('ep-ent');
+  if(ee && !ee.options.length) ee.innerHTML=ENTS.map(function(e){return '<option value="'+e.id+'">'+esc(e.name)+'</option>';}).join('');
+  renderCatalog();
+}
+
+// ── catalog ──
+function renderCatalog(){
+  var q=(document.getElementById('cat-q').value||'').toLowerCase();
+  var c=document.getElementById('cat-cat').value;
+  var rows=CATALOG.filter(function(x){
+    if(c && x.category!==c) return false;
+    if(q && (x.code+' '+x.name).toLowerCase().indexOf(q)<0) return false;
+    return true;
+  });
+  document.getElementById('cat-tbl').innerHTML = rows.length? rows.map(function(x){
+    var cost=bestCost(x.code), n=compCount(x.code);
+    return '<tr><td style="font-weight:700;font-family:ui-monospace,monospace">'+esc(x.code)+'</td>'+
+      '<td><span class="badge bp">'+(CAT_LABEL[x.category]||x.category)+'</span></td>'+
+      '<td>'+esc(x.name)+'</td>'+
+      '<td>'+(n? n+' panels':'<span style="color:var(--hint)">—</span>')+'</td>'+
+      '<td style="font-weight:700">'+money(x.list_price)+'</td>'+
+      '<td>'+(cost==null?'<span style="color:var(--hint)">—</span>':money(cost))+'</td>'+
+      '<td>'+marginHtml(Number(x.list_price||0), cost)+'</td></tr>';
+  }).join('') : '<tr><td colspan="7" class="empty">No items match</td></tr>';
+}
+
+// ── provider cost ──
+function renderProvCost(){
+  var lab=document.getElementById('pc-lab').value;
+  var q=(document.getElementById('pc-q').value||'').toLowerCase();
+  var rows=CATALOG.filter(function(x){return !q || (x.code+' '+x.name).toLowerCase().indexOf(q)>=0;});
+  document.getElementById('pc-tbl').innerHTML = rows.map(function(x){
+    var r=PCP.find(function(p){return p.lab_id===lab && p.catalog_code===x.code;});
+    var cp=r&&r.centre_price!=null?r.centre_price:'';
+    var act=!r||r.active!==false;
+    return '<tr data-code="'+x.code+'">'+
+      '<td style="font-weight:700;font-family:ui-monospace,monospace">'+esc(x.code)+'</td>'+
+      '<td>'+esc(x.name)+'</td>'+
+      '<td style="color:var(--hint)">'+money(x.list_price)+'</td>'+
+      '<td><input class="pc-in" type="number" value="'+cp+'" data-code="'+x.code+'" oninput="pcRecalc(this)" style="width:110px"></td>'+
+      '<td class="pc-m">'+marginHtml(Number(x.list_price||0), cp===''?null:Number(cp))+'</td>'+
+      '<td><input type="checkbox" class="pc-a" data-code="'+x.code+'" '+(act?'checked':'')+'></td></tr>';
+  }).join('');
+}
+function pcRecalc(inp){
+  var code=inp.dataset.code, item=CATALOG.find(function(x){return x.code===code;});
+  var v=inp.value===''?null:Number(inp.value);
+  inp.closest('tr').querySelector('.pc-m').innerHTML=marginHtml(Number(item.list_price||0), v);
+}
+function bulkCost(){
+  var pct=Number(document.getElementById('pc-bulk').value);
+  if(!pct||pct<=0) return toast('e','Enter a % of list price (e.g. 70)');
+  document.querySelectorAll('#pc-tbl .pc-in').forEach(function(inp){
+    if(inp.value!=='') return;
+    var item=CATALOG.find(function(x){return x.code===inp.dataset.code;});
+    inp.value=Math.round(Number(item.list_price||0)*pct/100);
+    pcRecalc(inp);
+  });
+  toast('s','Applied '+pct+'% of list to blank rows — review, then Save');
+}
+async function saveProvCost(){
+  var lab=document.getElementById('pc-lab').value;
+  if(!lab) return toast('e','Pick a provider');
+  var recs=[];
+  document.querySelectorAll('#pc-tbl .pc-in').forEach(function(inp){
+    if(inp.value==='') return;
+    var code=inp.dataset.code;
+    var act=document.querySelector('#pc-tbl .pc-a[data-code="'+code+'"]').checked;
+    recs.push({lab_id:lab, catalog_code:code, centre_price:Number(inp.value), active:act});
+  });
+  if(!recs.length) return toast('w','Nothing to save');
+  var r=await SB.from('provider_catalog_pricing').upsert(recs,{onConflict:'lab_id,catalog_code'});
+  if(r.error) return toast('e',r.error.message);
+  toast('s','Saved '+recs.length+' cost lines');
+  await loadPhase3(true); renderProvCost();
+}
+
+// ── enterprise pricing + margin ──
+function renderEntPrice(){
+  var ent=document.getElementById('ep-ent').value;
+  var q=(document.getElementById('ep-q').value||'').toLowerCase();
+  var rows=CATALOG.filter(function(x){return !q || (x.code+' '+x.name).toLowerCase().indexOf(q)>=0;});
+  var closed=0, below=0, totM=0, n=0;
+  var html=rows.map(function(x){
+    var r=ECP.find(function(p){return p.enterprise_id===ent && p.catalog_code===x.code;});
+    var list=Number(x.list_price||0);
+    var agreed=r&&r.agreed_price!=null?Number(r.agreed_price):null;
+    var sell=agreed==null?list:agreed;
+    var mode=(r&&r.mode)||'baseline';
+    if(agreed!=null) closed++;
+    var cost=bestCost(x.code);
+    var status;
+    if(cost==null) status='<span class="badge bgr">no cost</span>';
+    else if(sell<cost){ below++; status='<span class="badge br">below cost — close individual</span>'; }
+    else status='<span class="badge bg">routes on '+(mode==='closed_individual'?'closed rate':'baseline')+'</span>';
+    if(cost!=null){ totM+=(sell-cost); n++; }
+    return '<tr>'+
+      '<td style="font-weight:700;font-family:ui-monospace,monospace">'+esc(x.code)+'</td>'+
+      '<td>'+esc(x.name)+'</td>'+
+      '<td style="color:var(--hint)">'+money(list)+'</td>'+
+      '<td>'+(cost==null?'—':money(cost))+'</td>'+
+      '<td><input class="ep-in" type="number" placeholder="'+list+'" value="'+(agreed==null?'':agreed)+'" data-code="'+x.code+'" oninput="renderEntSummaryDebounced()" style="width:110px"></td>'+
+      '<td>'+(agreed==null?'<span class="badge bgr">baseline</span>':'<span class="badge bp">closed individual</span>')+'</td>'+
+      '<td>'+marginHtml(sell, cost)+'</td>'+
+      '<td>'+status+'</td></tr>';
+  }).join('');
+  document.getElementById('ep-tbl').innerHTML = html || '<tr><td colspan="8" class="empty">No items</td></tr>';
+  document.getElementById('ep-summary').innerHTML =
+    '<span class="chip">Closed individually: <b>'+closed+'</b></span>'+
+    '<span class="chip" style="background:'+(below?'var(--redbg)':'var(--teal-l)')+';color:'+(below?'var(--red)':'var(--teal-d)')+'">Below cost: <b>'+below+'</b></span>'+
+    '<span class="chip">Avg margin: <b>'+(n?money(Math.round(totM/n)):'—')+'</b></span>';
+}
+var _epT; function renderEntSummaryDebounced(){ clearTimeout(_epT); _epT=setTimeout(renderEntPrice,500); }
+function baselineAll(){
+  document.querySelectorAll('#ep-tbl .ep-in').forEach(function(i){i.value='';});
+  renderEntPrice(); toast('s','All rows reset to baseline — Save to apply');
+}
+async function saveEntPrice(){
+  var ent=document.getElementById('ep-ent').value;
+  if(!ent) return toast('e','Pick an enterprise');
+  var recs=[], del=[];
+  document.querySelectorAll('#ep-tbl .ep-in').forEach(function(inp){
+    var code=inp.dataset.code;
+    if(inp.value===''){ del.push(code); return; }
+    recs.push({enterprise_id:ent, catalog_code:code, agreed_price:Number(inp.value), mode:'closed_individual', status:'active'});
+  });
+  if(recs.length){
+    var r=await SB.from('enterprise_catalog_pricing').upsert(recs,{onConflict:'enterprise_id,catalog_code'});
+    if(r.error) return toast('e',r.error.message);
+  }
+  if(del.length){ await SB.from('enterprise_catalog_pricing').delete().eq('enterprise_id',ent).in('catalog_code',del); }
+  toast('s',recs.length+' closed-individual rates saved · '+del.length+' on baseline');
+  await loadPhase3(true); renderEntPrice();
+}
+
+// ── facilities ──
+async function renderFacilities(){
+  await loadPhase3();
+  var fl=document.getElementById('fc-lab'); if(fl && !fl.options.length) fl.innerHTML=labOpts();
+  var lab=fl.value||(LABS[0]&&LABS[0].id);
+  var today=new Date().toISOString().slice(0,10);
+  document.getElementById('fc-tbl').innerHTML = FACT.map(function(f){
+    var pf=PFAC.find(function(p){return p.lab_id===lab && p.facility_code===f.code;});
+    var on=pf?pf.enabled!==false:true;
+    var exc=FEXC.filter(function(e){return e.lab_id===lab && e.facility_code===f.code && e.date_from<=today && e.date_to>=today;});
+    return '<tr>'+
+      '<td><input type="checkbox" class="fc-s" data-code="'+f.code+'"></td>'+
+      '<td style="font-weight:600">'+esc(f.name)+'</td>'+
+      '<td><span class="badge bgr">'+esc(f.grp||'')+'</span></td>'+
+      '<td><div class="toggle'+(on?' on':'')+'" data-code="'+f.code+'" onclick="this.classList.toggle(\'on\')"></div></td>'+
+      '<td>'+(exc.length? '<span class="badge br">down today</span>' : '<span style="color:var(--hint)">—</span>')+'</td></tr>';
+  }).join('');
+  renderFx();
+}
+function facAll(v){ document.querySelectorAll('#fc-tbl .fc-s').forEach(function(c){c.checked=v;}); }
+function bulkFac(on){
+  var n=0;
+  document.querySelectorAll('#fc-tbl .fc-s:checked').forEach(function(c){
+    var t=document.querySelector('#fc-tbl .toggle[data-code="'+c.dataset.code+'"]');
+    if(t){ t.classList.toggle('on',on); n++; }
+  });
+  if(!n) return toast('w','Select facilities first');
+  toast('s',n+' facilities '+(on?'enabled':'disabled')+' — Save to apply');
+}
+async function saveFacilities(){
+  var lab=document.getElementById('fc-lab').value;
+  if(!lab) return toast('e','Pick a provider');
+  var recs=[];
+  document.querySelectorAll('#fc-tbl .toggle').forEach(function(t){
+    recs.push({lab_id:lab, facility_code:t.dataset.code, enabled:t.classList.contains('on')});
+  });
+  var r=await SB.from('provider_facilities').upsert(recs,{onConflict:'lab_id,facility_code'});
+  if(r.error) return toast('e',r.error.message);
+  toast('s','Facility availability saved');
+  await loadPhase3(true); renderFacilities();
+}
+function renderFx(){
+  document.getElementById('fx-tbl').innerHTML = FEXC.length? FEXC.map(function(e){
+    var lab=LABS.find(function(l){return l.id===e.lab_id;});
+    var fac=FACT.find(function(f){return f.code===e.facility_code;});
+    var slot=(e.slot_from&&e.slot_to)?(e.slot_from.slice(0,5)+'–'+e.slot_to.slice(0,5)):'Full day';
+    return '<tr><td style="font-weight:600">'+esc(lab?(lab.branch_name||lab.name):'—')+'</td>'+
+      '<td>'+esc(fac?fac.name:e.facility_code)+'</td><td>'+e.date_from+'</td><td>'+e.date_to+'</td>'+
+      '<td>'+slot+'</td><td><span class="badge bgr">'+esc((e.reason||'').replace(/_/g,' '))+'</span></td>'+
+      '<td style="text-align:right"><button class="abt r" onclick="delFx(\''+e.id+'\')">Remove</button></td></tr>';
+  }).join('') : '<tr><td colspan="7" class="empty">No downtime scheduled</td></tr>';
+}
+function openDowntime(){
+  document.getElementById('dt-lab').innerHTML=labOpts();
+  document.getElementById('dt-fac').innerHTML=FACT.map(function(f){return '<option value="'+f.code+'">'+esc(f.name)+'</option>';}).join('');
+  var t=new Date().toISOString().slice(0,10);
+  document.getElementById('dt-from').value=t; document.getElementById('dt-to').value=t;
+  document.getElementById('dt-sf').value=''; document.getElementById('dt-st').value='';
+  openMod('dt-modal');
+}
+async function saveDowntime(){
+  var rec={
+    lab_id:document.getElementById('dt-lab').value,
+    facility_code:document.getElementById('dt-fac').value,
+    date_from:document.getElementById('dt-from').value,
+    date_to:document.getElementById('dt-to').value,
+    slot_from:document.getElementById('dt-sf').value||null,
+    slot_to:document.getElementById('dt-st').value||null,
+    reason:document.getElementById('dt-reason').value,
+    status:'unavailable', created_by:(typeof ACTOR!=='undefined'?ACTOR:null)
+  };
+  if(!rec.lab_id||!rec.facility_code||!rec.date_from||!rec.date_to) return toast('e','Provider, facility and dates are required');
+  if(rec.date_to<rec.date_from) return toast('e','End date is before start date');
+  var r=await SB.from('facility_exceptions').insert(rec);
+  if(r.error) return toast('e',r.error.message);
+  closeMod('dt-modal'); toast('s','Downtime added — routing updated');
+  await loadPhase3(true); renderFacilities();
+}
+async function delFx(id){
+  var r=await SB.from('facility_exceptions').delete().eq('id',id);
+  if(r.error) return toast('e',r.error.message);
+  toast('s','Downtime removed'); await loadPhase3(true); renderFacilities();
 }
 
 </script>
